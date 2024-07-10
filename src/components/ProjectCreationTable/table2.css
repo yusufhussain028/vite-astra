@@ -1,0 +1,18 @@
+.pageSize {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 10px;
+}
+
+.modalBtnClass {
+    display: flex;
+    justify-content: space-evenly;
+}
+
+#btnCreate {
+    background-color: #666cff;
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+}

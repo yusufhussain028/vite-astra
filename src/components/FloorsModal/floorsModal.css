@@ -1,0 +1,27 @@
+.pageSize {
+    display: flex;
+    justify-content: space-between;
+}
+
+.modalBtnClass {
+    display: flex;
+    justify-content: space-evenly;
+}
+
+#btnCreate {
+    background-color: #666cff;
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    max-height: 32px;
+}
+
+#btnDelete {
+    background-color: #d67458;
+    border: none;
+    color: #f6f0f0;
+    border-radius: 5px;
+    cursor: pointer;
+    max-height: 32px;
+}
