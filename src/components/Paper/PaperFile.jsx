@@ -122,13 +122,11 @@ const DrawingTool = ({transparency}) => {
             <p>
                 Testing to change width and color of line
             </p>
-            {backgroundImage && (
                 <canvas
                     ref={canvasRef}
                     resize="true"
-                    style={{ width: '100%', height: '400px', backgroundImage: `url(${backgroundImage.source.src})`, backgroundSize: 'cover' }}
+                    style={{ width: '100%', height: '400px', backgroundSize: 'cover' }}
                 />
-            )}
             <button onClick={handleSaveCanvas}>Save Canvas</button>
         </div>
     );
