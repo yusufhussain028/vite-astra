@@ -21,5 +21,6 @@ canvas[resize] {
 .mainClass{
     position: relative;
     right: 25%;
+    top: -20px;
 }
 
