@@ -18,9 +18,9 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
-import ruler from '../../assets/ruler-measurement-icon.png';
-import floorsIcon from '../../assets/pngegg.png';
-import pipeIcon from '../../assets/pipeline.png';
+import ruler from '../../images/ruler-measurement-icon.png';
+import floorsIcon from '../../images/pngegg.png';
+import pipeIcon from '../../images/pipeline.png';
 import AdUnitsIcon from '@mui/icons-material/AdUnits';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LayersIcon from '@mui/icons-material/Layers';
@@ -40,6 +40,8 @@ import TableComponent from './../FluentUITable/FluentUITable.jsx';
 import FloorsModal from './../FloorsModal/FloorsModal.jsx';
 import DrawingTool from '../Paper/PaperFile.jsx';
 import Popover from '@mui/material/Popover';
+import goBack from '../../images/go-back.png';
+import { useNavigate } from 'react-router-dom';
 
 const drawerWidth = 240;
 
@@ -88,6 +90,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 export default function ResponsiveDrawer() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const [open, setOpen] = React.useState(false);
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [isClosing, setIsClosing] = React.useState(false);
@@ -143,6 +146,10 @@ export default function ResponsiveDrawer() {
     const handleUnitsSelection = (units) => {
         setSelectedUnits(units);
     };
+
+    const handleGoBack = () => {
+        navigate('/vite-astra');
+    }
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -224,6 +231,9 @@ export default function ResponsiveDrawer() {
                 </List>
             </Drawer>
             <Main open={open}>
+            <IconButton color="primary" onClick={handleGoBack} style={{position: "absolute", top: "1%", left: "95%"}}>
+                                <img src={goBack} height='20' width='20' />
+                            </IconButton>
                 <Box
                     component="main"
                     sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
@@ -501,19 +511,19 @@ export default function ResponsiveDrawer() {
                             <DrawingTool />
                         </Box> */}
                         <div style={{
-                        width: '100px',
-                        height: '100px',
-                        backgroundColor: `rgba(0, 0, 0, ${transparency / 100})`,
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)', // Center the box within the parent
-                        display: 'flex', // Use flexbox
-                        justifyContent: 'center', // Center horizontally
-                        alignItems: 'center' // Center vertically
-                    }}>
-                        hello
-                    </div>
+                            width: '100px',
+                            height: '100px',
+                            backgroundColor: `rgba(0, 0, 0, ${transparency / 100})`,
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)', // Center the box within the parent
+                            display: 'flex', // Use flexbox
+                            justifyContent: 'center', // Center horizontally
+                            alignItems: 'center' // Center vertically
+                        }}>
+                            hello
+                        </div>
                     </>
                 )}
             </Main>

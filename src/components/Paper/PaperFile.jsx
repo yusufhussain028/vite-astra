@@ -26,7 +26,7 @@ const DrawingTool = ({transparency}) => {
             };
 
             // Replace '/path/to/your/image.jpg' with your actual image path
-            img.src = '/src/assets/Building D_Type 2(A)_240108.gif';
+            img.src = '../../../public/assets/drawing1.gif';
         };
 
         // Initialize Paper.js on the canvas element
@@ -122,13 +122,11 @@ const DrawingTool = ({transparency}) => {
             <p>
                 Testing to change width and color of line
             </p>
-            {backgroundImage && (
                 <canvas
                     ref={canvasRef}
                     resize="true"
-                    style={{ width: '100%', height: '400px', backgroundImage: `url(${backgroundImage.source.src})`, backgroundSize: 'cover' }}
+                    style={{ width: '100%', height: '400px', backgroundSize: 'cover' }}
                 />
-            )}
             <button onClick={handleSaveCanvas}>Save Canvas</button>
         </div>
     );

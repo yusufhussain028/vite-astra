@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { styled } from '@mui/material/styles';
-import './table.css'
+import './table.css';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
@@ -21,15 +21,15 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
         backgroundColor: '#F5F5F7',
         color: '#000',
-        textAlign: 'center', // Center align header cells
-        padding: '5px', // Adjust padding as needed to align with body cells
-        fontSize: '0.785rem', // Small font size
-        fontWeight: 'bold', // Bold font weight
+        textAlign: 'center',
+        padding: '5px',
+        fontSize: '0.785rem',
+        fontWeight: 'bold',
     },
     [`&.${tableCellClasses.body}`]: {
         fontSize: 14,
-        textAlign: 'center', // Center align body cells
-        padding: '8px', // Adjust padding as needed to align with header cell
+        textAlign: 'center',
+        padding: '8px',
     },
 }));
 
@@ -41,7 +41,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
         border: 0,
     },
     '& > *': {
-        textAlign: 'center', // Align all children elements to center
+        textAlign: 'center',
     },
 }));
 
@@ -102,7 +102,6 @@ export default function CustomizedTables() {
     };
 
     const handleCreateProject = () => {
-        // alert("creating");
         setOpenModal(false);
         navigate('/createdProjects');
     }
@@ -118,8 +117,8 @@ export default function CustomizedTables() {
                 <p style={{ color: "#B6B7C0" }}>show</p>
                 <button id="btnCreate" onClick={handleOpenModal}>+ CREATE PROJECT</button>
             </div>
-            <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 700 }} aria-label="customized table">
+            <TableContainer component={Paper} style={{ width: '100% !important', overflowX: 'auto', backgroundColor: "#F5F5F7" }}>
+                <Table sx={{ minWidth: 700, width: '100% !important' }} aria-label="customized table">
                     <TableHead>
                         <TableRow>
                             <StyledTableCell>
@@ -194,7 +193,7 @@ export default function CustomizedTables() {
                     bgcolor: 'background.paper',
                     boxShadow: 24,
                     p: 4,
-                    borderRadius: 4, // Border radius for the modal content
+                    borderRadius: 4,
                 }}>
                     <Typography id="modal-modal-title" variant="h6" component="h2" gutterBottom>
                         NEW PROJECT DETAILS
@@ -207,14 +206,14 @@ export default function CustomizedTables() {
                         <InputLabel htmlFor="Name">Name</InputLabel>
                         <Input id="floor-abbreviation" />
                     </FormControl>
-                        <div className='modalBtnClass'>
-                            <Button onClick={handleCloseModal} variant="contained" color="primary" style={{ backgroundColor: "#fff", borderRadius: "5px solid grey", color: "#000" }}>
-                                CANCEL
-                            </Button>
-                            <Button onClick={handleCreateProject} variant="contained" color="primary" style={{ backgroundColor: "#666cff" }}>
-                                CREATE
-                            </Button>
-                        </div>
+                    <div className='modalBtnClass'>
+                        <Button onClick={handleCloseModal} variant="contained" color="primary" style={{ backgroundColor: "#fff", borderRadius: "5px solid grey", color: "#000" }}>
+                            CANCEL
+                        </Button>
+                        <Button onClick={handleCreateProject} variant="contained" color="primary" style={{ backgroundColor: "#666cff" }}>
+                            CREATE
+                        </Button>
+                    </div>
                 </Box>
             </Modal>
         </>

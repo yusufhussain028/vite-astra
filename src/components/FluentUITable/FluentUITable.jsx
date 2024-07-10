@@ -11,7 +11,7 @@ import {
   Checkbox,
   Stack,
 } from '@fluentui/react';
-import DeleteIcon from '../../assets/delete.png';
+import DeleteIcon from '../../images/delete.png';
 import { makeStyles, useId, Input, Label } from "@fluentui/react-components";
 import { useBoolean } from '@fluentui/react-hooks';
 import {
@@ -24,7 +24,7 @@ import {
   VideoRegular,
 } from '@fluentui/react-icons';
 import './fluentUITable.css';
-import closeIcon from '../../assets/Close.png';
+import closeIcon from '../../images/Close.png';
 
 const initialItems = [
   {
