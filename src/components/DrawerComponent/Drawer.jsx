@@ -162,7 +162,7 @@ export default function ResponsiveDrawer() {
                     edge="start"
                     sx={{ mr: 2, ...(open && { display: 'none' }) }}
                 >
-                    <MenuIcon />
+                    <MenuIcon style={{marginLeft: "10px"}} />
                 </IconButton>
             </div>
             <Drawer

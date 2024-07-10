@@ -33,7 +33,7 @@ const DrawingTool = ({transparency}) => {
         paper.setup(canvasRef.current);
 
         // Load the image after Paper.js setup
-        loadImage();
+        loadImage(); 
 
         // Set up Paper.js tool and event handlers
         let myPath;
@@ -122,11 +122,13 @@ const DrawingTool = ({transparency}) => {
             <p>
                 Testing to change width and color of line
             </p>
+            {backgroundImage && (
                 <canvas
                     ref={canvasRef}
                     resize="true"
-                    style={{ width: '100%', height: '400px', backgroundSize: 'cover' }}
+                    style={{ width: '100%', height: '400px', backgroundImage: `url(${backgroundImage.source.src})`, backgroundSize: 'cover' }}
                 />
+            )}
             <button onClick={handleSaveCanvas}>Save Canvas</button>
         </div>
     );

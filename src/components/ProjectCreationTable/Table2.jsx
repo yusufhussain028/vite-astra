@@ -111,10 +111,10 @@ export default function CustomizedTables2() {
 
     return (
         <>
-            <h3>PROJECT LIST</h3>
+            <h4 style={{paddingLeft: "10px", fontWeight: "lighter"}}>PROJECT LIST</h4>
             <div className="pageSize">
-                <p style={{ color: "#B6B7C0" }}>show</p>
-                <button id="btnCreate" onClick={handleOpenModal}>+ CREATE PROJECT</button>
+                <p style={{ color: "#B6B7C0", paddingLeft: "10px", fontWeight: "lighter" }}>show</p>
+                <button style={{marginRight: "10px"}} id="btnCreate" onClick={handleOpenModal}>+ CREATE PROJECT</button>
             </div>
             <TableContainer component={Paper}>
                 <Table sx={{ minWidth: 700 }} aria-label="customized table">
