@@ -12,7 +12,7 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<CustomizedTables />} />
+          <Route path="/vite-astra/" element={<CustomizedTables />} />
           <Route path="/createdProjects" element={<CustomizedTables2 />} />
           <Route path="/drawer" element={<ResponsiveDrawer />} />
         </Routes>
