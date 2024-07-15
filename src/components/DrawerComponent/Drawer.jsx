@@ -31,13 +31,14 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import { FormControl } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import Slider from '@mui/material/Slider';
 import TableComponent from './../FluentUITable/FluentUITable.jsx';
-import FloorsModal from './../FloorsModal/FloorsModal.jsx';
 import DrawingTool from '../Paper/PaperFile.jsx';
 import Popover from '@mui/material/Popover';
 import goBack from '../../images/go-back.png';
@@ -92,8 +93,6 @@ export default function ResponsiveDrawer() {
     const theme = useTheme();
     const navigate = useNavigate();
     const [open, setOpen] = React.useState(false);
-    const [mobileOpen, setMobileOpen] = React.useState(false);
-    const [isClosing, setIsClosing] = React.useState(false);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [modalContent, setModalContent] = React.useState('');
     const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -103,6 +102,23 @@ export default function ResponsiveDrawer() {
     const [unitsModalAgain, setUnitsModalAgain] = React.useState(false);
     const [unitsDisabled, setUnitsDisabled] = React.useState(false);
     const [settingsAnchorEl, setSettingsAnchorEl] = React.useState(null);
+    const [imageSwitchOn, setImageSwitchOn] = React.useState(false);
+    const [uploadedImage, setUploadedImage] = React.useState(null);
+    const [uploadedImageName, setUploadedImageName] = React.useState('');
+    const [deleteImage, setDeleteImage] = React.useState(false);
+    const [dummyQuestionModalOpen, setDummyQuestionModalOpen] = React.useState(false);
+    const [selectedFile, setSelectedFile] = React.useState(null);
+    const [uploadBtn, setUploadBtn] = React.useState(false);
+    const [currentDimensions, setCurrentDimensions] = React.useState('');
+    const [newDimensions, setNewDimensions] = React.useState('');
+    const [newScale, setNewScale] = React.useState();
+
+    const customCanvasStyle = {
+        backgroundColor: '#fff',
+        position: "absolute",
+        width: "100vw",
+        height: "100vh"
+    };
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -129,7 +145,6 @@ export default function ResponsiveDrawer() {
     };
 
     const handleSettingsClick = (event) => {
-        alert("enter")
         setSettingsAnchorEl(event.currentTarget);
         setSettingsOpen(!settingsOpen);
     };
@@ -151,6 +166,65 @@ export default function ResponsiveDrawer() {
         navigate('/vite-astra');
     }
 
+    const handleImageSwitchChange = (event) => {
+        setImageSwitchOn(event.target.checked);
+    };
+
+    const handleUploadClick = () => {
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = 'image/*';
+        uploadInput.onchange = handleFileSelect;
+        uploadInput.click();
+        setDeleteImage(true);
+    };
+
+    const handleFileSelect = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setDummyQuestionModalOpen(true);  // Open the dummy questions modal after the file is selected
+        }
+    };
+
+    const handleFileUpload = () => {
+        if (selectedFile) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setUploadedImage(reader.result);
+                setUploadedImageName(selectedFile.name);
+                setUploadBtn(true);
+            };
+            reader.readAsDataURL(selectedFile);
+            setSelectedFile(null);
+        }
+    };
+
+    const handleDeleteImage = () => {
+        setUploadedImage(null);
+        setUploadedImageName('');
+        setDeleteImage(false);
+        setUploadBtn(false);
+    };
+
+    const handleDummyQuestionSubmit = () => {
+        setDummyQuestionModalOpen(false);
+        handleFileUpload();  // Upload the image after the dummy questions are submitted
+    };
+
+    const handleCurrentDimensionsChange = (event) => {
+        setCurrentDimensions(event.target.value);
+    };
+
+    const handleNewDimensionsChange = (event) => {
+        setNewDimensions(event.target.value);
+        setNewScale(event.target.value)
+    };
+
+    const handleChangeScale = () => {
+        setDummyQuestionModalOpen(true);
+    };
+
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
@@ -162,7 +236,7 @@ export default function ResponsiveDrawer() {
                     edge="start"
                     sx={{ mr: 2, ...(open && { display: 'none' }) }}
                 >
-                    <MenuIcon style={{marginLeft: "10px"}} />
+                    <MenuIcon style={{ marginLeft: "10px", zIndex: "999" }} />
                 </IconButton>
             </div>
             <Drawer
@@ -231,9 +305,9 @@ export default function ResponsiveDrawer() {
                 </List>
             </Drawer>
             <Main open={open}>
-            <IconButton color="primary" onClick={handleGoBack} style={{position: "absolute", top: "1%", left: "95%"}}>
-                                <img src={goBack} height='20' width='20' />
-                            </IconButton>
+                <IconButton color="primary" onClick={handleGoBack} style={{ position: "absolute", top: "1%", left: "95%", zIndex: "999" }}>
+                    <img src={goBack} height='20' width='20' />
+                </IconButton>
                 <Box
                     component="main"
                     sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
@@ -249,6 +323,7 @@ export default function ResponsiveDrawer() {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
+                                zIndex: '999'
                             }}
                         >
                             <IconButton color="primary" onClick={handleSettingsClick}>
@@ -267,7 +342,6 @@ export default function ResponsiveDrawer() {
                     </Typography>
                 </Box>
                 {modalContent === 'Floors' ? (
-                    // <FloorsModal open={modalOpen} onClose={handleModalClose} />
                     <Dialog
                         open={modalOpen}
                         onClose={handleModalClose}
@@ -344,11 +418,18 @@ export default function ResponsiveDrawer() {
                             position: 'relative',
                             left: "35%",
                             bottom: "35%",
-                            width: "50vw",
-                            height: "45vh"
+                            width: "90vw",
+                            height: "55vh"
                         }}
                     >
-                        <DrawingTool />
+                        <DrawingTool
+                            canvasStyle={customCanvasStyle}
+                            transparency={transparency}
+                            lockedImage={imageSwitchOn}
+                            uploadImage={uploadedImage}
+                            scaleDimn={newDimensions}
+                            newScale={newScale}
+                        />
                     </Box>
                 )}
                 {settingsOpen && (
@@ -384,146 +465,130 @@ export default function ResponsiveDrawer() {
                                     </div>
                                     <div style={{ marginLeft: "175px", marginTop: "-6px" }}>
                                         <FormGroup>
-                                            <FormControlLabel control={<Switch />} label="" />
+                                            <FormControlLabel control={<Switch checked={imageSwitchOn} onChange={handleImageSwitchChange} />} label="" />
                                         </FormGroup>
                                     </div>
                                 </div>
-                                <div>
-                                    <Typography variant="h6" style={{ color: 'rgba(0, 0, 0, 0.5)', marginBottom: '1px', marginTop: '8px', fontSize: '12px' }}>Transparency Slider</Typography>
-                                    <Slider
-                                        size="small"
-                                        defaultValue={70}
-                                        aria-label="Small"
-                                        valueLabelDisplay="auto"
-                                        style={{ opacity: 0.8 }}
-                                        onChange={handleSliderChange}
-                                    />
-                                </div>
-                                <div style={{ display: "flex" }}>
-                                    <div style={{ marginTop: "8px" }}>Lock</div>
-                                    <div style={{ marginLeft: "190px", float: "right" }}>
-                                        <FormGroup>
-                                            <FormControlLabel control={<Switch />} label="" />
-                                        </FormGroup>
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex" }}>
-                                    <div>Scale</div>
-                                    <div>
-                                        <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "180px" }}>
-                                            Change scale
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", marginTop: "10px" }}>
-                                    <div>Move Image</div>
-                                    <div>
-                                        <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "142px" }}>
-                                            MOVE IMAGE
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", marginTop: "10px" }}>
-                                    <div>Upload</div>
-                                    <div>
-                                        <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "200px" }}>
-                                            Upload
-                                        </Button>
-                                    </div>
-                                </div>
+                                {imageSwitchOn && imageSwitchOn == true ?
+                                    <>
+                                        <div>
+                                            <Typography variant="h6" style={{ color: 'rgba(0, 0, 0, 0.5)', marginBottom: '1px', marginTop: '8px', fontSize: '12px' }}>Transparency Slider</Typography>
+                                            <Slider
+                                                size="small"
+                                                defaultValue={70}
+                                                aria-label="Small"
+                                                valueLabelDisplay="auto"
+                                                style={{ opacity: 0.8 }}
+                                                disabled={!uploadedImage}
+                                                onChange={handleSliderChange}
+                                            />
+                                        </div>
+                                        <div style={{ display: "flex" }}>
+                                            <div style={{ marginTop: "8px" }}>Lock</div>
+                                            <div style={{ marginLeft: "190px", float: "right" }}>
+                                                <FormGroup>
+                                                    <FormControlLabel control={<Switch />} label="" />
+                                                </FormGroup>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex" }}>
+                                            <div>Scale</div>
+                                            <div>
+                                                <Button variant="contained" color="primary" disabled={!uploadedImage} style={{ fontSize: "8px", marginLeft: "180px"}} onClick={handleChangeScale}>
+                                                    Change scale
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", marginTop: "10px" }}>
+                                            <div>Move Image</div>
+                                            <div>
+                                                <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "142px" }}>
+                                                    MOVE IMAGE
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", marginTop: "10px" }}>
+                                            <div>Upload</div>
+                                            <div>
+                                                {uploadBtn === true ?
+                                                    <>
+                                                        <Button
+                                                            variant="contained"
+                                                            style={{
+                                                                fontSize: "8px",
+                                                                marginLeft: "100px",
+                                                                backgroundColor: uploadedImage ? 'red' : '',
+                                                            }}
+                                                            onClick={handleDeleteImage} // Attach the delete function here
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                        {uploadedImageName && (
+                                                            <div style={{
+                                                                position: "relative",
+                                                                marginLeft: "100px",
+                                                                left: "32%",
+                                                                bottom: "50%",
+                                                                border: "1px solid red",
+                                                                width: "100px",  // Fixed width for the div
+                                                                whiteSpace: "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                            }}>
+                                                                {uploadedImageName}
+                                                            </div>
+                                                        )}
+                                                    </> :
+                                                    <Button
+                                                        variant="contained"
+                                                        style={{
+                                                            fontSize: "8px",
+                                                            marginLeft: "200px",
+                                                            backgroundColor: uploadedImage ? 'red' : '',
+                                                        }}
+                                                        onClick={handleUploadClick}
+                                                    >
+                                                        Upload
+                                                    </Button>}
+                                            </div>
+                                        </div>
+                                    </> : <></>}
                             </Box>
                         </Popover>
-                        {/* <div style={{ position: "relative", maxHeight: "20px", maxWidth: "20px", marginTop: "142px", marginRight: "10px" }}>
-                        <IconButton color="primary" onClick={handleSettingsClick}>
-                            <SettingsIcon />
-                        </IconButton>
-                    </div>
-                    <Box
-                        
-                    >
-                        <IconButton color="primary" onClick={handleCloseSettingsClick} style={{ float: "right" }}>
-                            <CloseIcon />
-                        </IconButton>
-                        <div style={{ display: "flex", paddingTop: "40px" }}>
-                            <div style={{ display: "flex", alignItems: "center" }}>
-                                <p style={{ margin: 0 }}>Image</p>
-                            </div>
-                            <div style={{ marginLeft: "150px", marginTop: "-6px" }}>
-                                <FormGroup>
-                                    <FormControlLabel control={<Switch />} label="" />
-                                </FormGroup>
-                            </div>
-                        </div>
-                        <div>
-                            <Typography variant="h6" style={{ color: 'rgba(0, 0, 0, 0.5)', marginBottom: '1px', marginTop: '8px', fontSize: '12px' }}>Transparency Slider</Typography>
-                            <Slider
-                                size="small"
-                                defaultValue={70}
-                                aria-label="Small"
-                                valueLabelDisplay="auto"
-                                style={{ opacity: 0.8 }}
-                                onChange={handleSliderChange}
-                            />
-                        </div>
-                        <div style={{ display: "flex" }}>
-                            <div style={{ marginTop: "8px" }}>Lock</div>
-                            <div style={{ marginLeft: "160px", float: "right" }}>
-                                <FormGroup>
-                                    <FormControlLabel control={<Switch />} label="" />
-                                </FormGroup>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex" }}>
-                            <div>Scale</div>
-                            <div>
-                                <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "120px" }}>
-                                    Change scale
-                                </Button>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", marginTop: "10px" }}>
-                            <div>Move Image</div>
-                            <div>
-                                <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "82px" }}>
-                                    MOVE IMAGE
-                                </Button>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", marginTop: "10px" }}>
-                            <div>Upload</div>
-                            <div>
-                                <Button variant="contained" color="primary" style={{ fontSize: "8px", marginLeft: "139px" }}>
-                                    Upload
-                                </Button>
-                            </div>
-                        </div>
-                    </Box> */}
-                        {/* <Box
-                            sx={{
-                                display: 'flex',
-                                position: 'relative',
-                                left: "35%",
-                                bottom: "35%",
-                                width: "50vw",
-                                height: "45vh"
-                            }}
-                        >
-                            <DrawingTool />
-                        </Box> */}
-                        <div style={{
-                            width: '100px',
-                            height: '100px',
-                            backgroundColor: `rgba(0, 0, 0, ${transparency / 100})`,
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)', // Center the box within the parent
-                            display: 'flex', // Use flexbox
-                            justifyContent: 'center', // Center horizontally
-                            alignItems: 'center' // Center vertically
-                        }}>
-                            hello
-                        </div>
+                        {dummyQuestionModalOpen && (
+                            <Dialog open={dummyQuestionModalOpen} onClose={() => setDummyQuestionModalOpen(false)}>
+                                <DialogTitle>Dummy Questions</DialogTitle>
+                                <DialogContent>
+                                    <Typography id="modal-modal-title" variant="h6" component="h2" gutterBottom>
+                                        Please Scale The Image
+                                    </Typography>
+                                    <FormControl fullWidth margin="normal">
+                                        <TextField
+                                            id="outlined-basic"
+                                            label="Current Dimensions"
+                                            variant="outlined"
+                                            value={currentDimensions}
+                                            onChange={handleCurrentDimensionsChange} />
+                                    </FormControl>
+                                    <FormControl fullWidth margin="normal">
+                                        <TextField
+                                            id="outlined-basic"
+                                            label="New Dimensions"
+                                            variant="outlined"
+                                            value={newDimensions}
+                                            onChange={handleNewDimensionsChange} />
+                                    </FormControl>
+                                </DialogContent>
+                                <DialogActions>
+                                    <Button onClick={() => setDummyQuestionModalOpen(false)} color="secondary" style={{ border: "1px solid grey", color: "grey" }}>
+                                        Cancel
+                                    </Button>
+                                    <Button onClick={handleDummyQuestionSubmit} color="primary" style={{ backgroundColor: "#666CFF", color: "#fff" }}>
+                                        OK
+                                    </Button>
+                                </DialogActions>
+                            </Dialog>
+                        )}
                     </>
                 )}
             </Main>
