@@ -25,3 +25,17 @@ canvas[resize] {
     width: 100%;
 }
 
+.instruction-text {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 15px;
+    color: blue;
+    background-color:rgb(139, 216, 216);
+    border-radius: 5px;
+}
+
