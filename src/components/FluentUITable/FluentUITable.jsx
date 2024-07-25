@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   DetailsList,
   DetailsListLayoutMode,
@@ -7,14 +7,55 @@ import {
   DefaultButton,
   Modal,
   TextField,
+  IconButton,
   Checkbox,
   Stack,
 } from '@fluentui/react';
 import DeleteIcon from '../../images/delete.png';
-import { DocumentRegular, EditRegular } from '@fluentui/react-icons';
+import { makeStyles, useId, Input, Label } from "@fluentui/react-components";
+import { useBoolean } from '@fluentui/react-hooks';
+import {
+  FolderRegular,
+  EditRegular,
+  OpenRegular,
+  DocumentRegular,
+  PeopleRegular,
+  DocumentPdfRegular,
+  VideoRegular,
+} from '@fluentui/react-icons';
 import './fluentUITable.css';
 import closeIcon from '../../images/Close.png';
-import { useBoolean } from '@fluentui/react-hooks';
+
+// const initialItems = [
+//   {
+//     key: '1',
+//     file: { label: 'Floor design', icon: <DocumentRegular /> },
+//     author: { label: 'Max Mustermann', status: 'available' },
+//     lastUpdated: { label: '7h ago', timestamp: 3 },
+//     lastUpdate: { label: 'You edited this', icon: <EditRegular /> },
+//   },
+//   {
+//     key: '2',
+//     file: { label: '2nd Floor design', icon: <FolderRegular /> },
+//     author: { label: 'Erika Mustermann', status: 'busy' },
+//     lastUpdated: { label: 'Yesterday at 1:45 PM', timestamp: 2 },
+//     lastUpdate: { label: 'You recently opened this', icon: <OpenRegular /> },
+//   },
+//   {
+//     key: '3',
+//     file: { label: 'Floor map', icon: <VideoRegular /> },
+//     author: { label: 'John Hammond', status: 'away' },
+//     lastUpdated: { label: 'Yesterday at 1:45 PM', timestamp: 2 },
+//     lastUpdate: { label: 'You recently opened this', icon: <OpenRegular /> },
+//   },
+//   {
+//     key: '4',
+//     file: { label: 'Unheated section map', icon: <DocumentPdfRegular /> },
+//     author: { label: 'Jane Doe', status: 'offline' },
+//     lastUpdated: { label: 'Tue at 9:30 AM', timestamp: 1 },
+//     lastUpdate: { label: 'You shared this in a Teams chat', icon: <PeopleRegular /> },
+//   },
+// ];
 
 const TableComponent = () => {
   const [items, setItems] = useState([]);
@@ -22,20 +63,6 @@ const TableComponent = () => {
   const [newFileLabel, setNewFileLabel] = useState('');
   const [newFileAbbrevation, setNewFileAbbrevation] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
-
-  // Load data from localStorage when the component mounts
-  useEffect(() => {
-    const storedItems = localStorage.getItem('tableItems');
-    if (storedItems) {
-      setItems(JSON.parse(storedItems));
-    }
-  }, []);
-
-  // Save data to localStorage whenever the items change
-  useEffect(() => {
-    debugger;
-    localStorage.setItem('tableItems', JSON.stringify(items));
-  }, [items]);
 
   const handleAddFile = () => {
     setItems([
@@ -142,6 +169,13 @@ const TableComponent = () => {
       isResizable: true,
       onRender: (item) => (
         <img src={DeleteIcon} width='20' height='20' onClick={() => handleDelete(item.key)} style={{cursor: "pointer"}}></img>
+        // <IconButton
+        //   iconProps={{ iconName: 'Delete' }}
+        //   title="Delete"
+        //   ariaLabel="Delete"
+        //   onClick={() => handleDelete(item.key)}
+        //   styles={{ root: { color: '#a80000' } }}
+        // />
       ),
     },
   ];
@@ -149,7 +183,7 @@ const TableComponent = () => {
   return (
     <div>
       <Stack horizontal horizontalAlign="space-between" styles={{ root: { marginBottom: 20 } }}>
-        <PrimaryButton text="+ ADD FILE" onClick={showModal} />
+        <PrimaryButton text="+ ADD FLOORS" onClick={showModal} />
         <DefaultButton
           text="DELETE SELECTED"
           onClick={handleDeleteSelected}
@@ -170,9 +204,25 @@ const TableComponent = () => {
         containerClassName="modal-container"
       >
         <div className="modal-header">
-          <span>Add New File</span>
+          <span>Add New Floor</span>
           <img src={closeIcon} height="25" width="30" onClick={hideModal} style={{cursor: "pointer"}}></img>
+          {/* <IconButton
+            iconProps={{ iconName: 'Cancel' }}
+            ariaLabel="Close popup modal"
+            onClick={hideModal}
+          /> */}
         </div>
+        {/* <div className="modal-body">
+          <TextField
+            label="File Label"
+            value={newFileLabel}
+            onChange={(e, newValue) => setNewFileLabel(newValue)}
+          />
+          <Stack horizontal horizontalAlign="end" style={{display: "flex", marginTop: "35px", justifyContent: "space-evenly"}}>
+            <DefaultButton text="Cancel" onClick={hideModal} />
+            <PrimaryButton text="Add" onClick={handleAddFile} />
+          </Stack>
+        </div> */}
         <div className="modal-body">
           <TextField
             label="Floor Name"

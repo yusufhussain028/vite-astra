@@ -99,14 +99,16 @@ const DrawingTool = ({
         let startPoint = null;
         let wallPath = null;
         let tempPath = null;
-        const SNAP_THRESHOLD = 500; // pixels within which snapping occurs
+        let outlinePath = null; // To store the outline path
+        const SNAP_THRESHOLD = 100; // pixels within which snapping occurs
         let currentLineThickness = 10; // Default line thickness
+        let lineCount = 0;  // To alternate between solid and dashed lines
 
         const resetAndActivateWallTool = () => {
-            startPoint = null; // Reset start point
-            wallPath = null; // Clear the current path
-            tempPath = null; // Clear the temporary path
-            wallTool.activate(); // Reactivate wall tool for new input
+            startPoint = null;  // Reset start point
+            wallPath = null;    // Clear the current path
+            outlinePath = null; // Clear the outline path
+            wallTool.activate();  // Reactivate wall tool for new input
         };
 
         const displayDimension = (start, end) => {
@@ -125,149 +127,95 @@ const DrawingTool = ({
 
             const dimensionText = new PointText({
                 point: textPoint,
-                content: `${distance.toFixed(2)}${selectedUnit}`,
+                content: `${distance.toFixed(2)} units`, // Add your desired unit here
                 fillColor: 'black',
                 fontFamily: 'Arial',
                 fontWeight: 'bold',
-                fontSize: 10,
-                justification: 'center',
+                fontSize: 12,
+                justification: 'center'
             });
             dimensionText.bringToFront();
-            textLayerRef.current.addChild(dimensionText);
         };
 
         wallTool.onMouseDown = (event) => {
-            if (drawWalls) {
-                if (!startPoint) {
-                    // First click sets the start point for a new wall
-                    startPoint = event.point;
-                    // Initialize a new path with the start point
-                    wallPath = new Path({
-                        segments: [startPoint],
-                        strokeColor: 'black',
-                        strokeWidth: currentLineThickness,
-                        fillColor: null,
-                        fullySelected: true,
-                    });
-                } else {
-                    // Add the current point to the path to complete the segment
-                    wallPath.add(event.point);
-                    // Display the dimension for the completed segment
-                    displayDimension(startPoint, event.point);
+            if (!startPoint) {
+                // First click sets the start point for a new wall
+                startPoint = event.point;
+                wallPath = new Path({
+                    segments: [startPoint],
+                    strokeColor: 'black',
+                    strokeWidth: 15,
+                    fillColor: null,
+                    fullySelected: true
+                });
 
-                    // Check if the segment should be a dashed line
-                    if (wallPath.segments.length > 2 && startPoint.getDistance(event.point) <= SNAP_THRESHOLD) {
-                        wallPath.add(wallPath.firstSegment.point);
-                        wallPath.strokeColor = 'black';
-                        wallPath.dashArray = [];
-                        if (tempPath) {
-                            tempPath.remove(); // Remove temporary dashed line
-                        }
-                        resetAndActivateWallTool();
-                    } else {
-                        // Update startPoint for the next segment
-                        startPoint = event.point;
-                        // Initialize a new path from the current point to allow continuous drawing
-                        wallPath = new Path({
-                            segments: [startPoint],
-                            strokeColor: 'black',
-                            strokeWidth: currentLineThickness,
-                            fillColor: null,
-                            fullySelected: true,
-                        });
-                    }
+                // Initialize the outline path with the start point
+                outlinePath = new Path({
+                    segments: [startPoint],
+                    strokeColor: 'black',
+                    strokeWidth: 1,
+                    fillColor: null,
+                    dashArray: [4, 4], // Dashed line pattern
+                    fullySelected: false
+                });
+
+            } else {
+                // Subsequent clicks continue adding to the path
+                wallPath.add(event.point);
+                displayDimension(startPoint, event.point); // Display the dimension of the segment
+                startPoint = event.point; // Reset startPoint to the last clicked point
+
+                // Update the outline path with the new segment
+                outlinePath.add(event.point);
+
+                if (wallPath.firstSegment.point.getDistance(event.point) <= SNAP_THRESHOLD) {
+                    // If close to the first point, snap to it and close the outline path
+                    wallPath.add(wallPath.firstSegment.point);
+                    outlinePath.add(wallPath.firstSegment.point);
+                    wallPath.closed = true;
+                    outlinePath.closed = true;
+                    resetAndActivateWallTool();
                 }
             }
         };
 
         wallTool.onMouseMove = (event) => {
-            if (drawWalls && startPoint && wallPath) {
-                if (startPoint && wallPath.firstSegment && event.point.getDistance(wallPath.firstSegment.point) <= SNAP_THRESHOLD) {
-                    // If close to the first point, show a dashed line to the start point
-                    if (!tempPath) {
-                        tempPath = new Path({
-                            segments: [wallPath.lastSegment.point, wallPath.firstSegment.point],
-                            strokeColor: 'red',
-                            strokeWidth: currentLineThickness,
-                            dashArray: [10, 4],
-                        });
-                    } else {
-                        tempPath.segments[1].point = wallPath.firstSegment.point;
-                    }
-                } else {
-                    if (tempPath) {
-                        tempPath.remove();
-                        tempPath = null;
-                    }
-                    // Otherwise, update normally
-                    if (wallPath.segments.length > 1) {
-                        wallPath.lastSegment.point = event.point;
-                    }
+            if (startPoint && wallPath) {
+                if (tempPath) {
+                    tempPath.remove();
+                }
+
+                tempPath = new Path({
+                    segments: [startPoint, event.point],
+                    strokeColor: 'gray',
+                    strokeWidth: 10, // Thicker dashed line
+                    dashArray: [10, 4] // Adjusted dash pattern
+                });
+
+                if (event.point.getDistance(wallPath.firstSegment.point) <= SNAP_THRESHOLD) {
+                    // If close to the first point, snap to it
+                    tempPath.lastSegment.point = wallPath.firstSegment.point;
+                    tempPath.strokeColor = 'red';
                 }
             }
         };
 
+        wallTool.onMouseUp = (event) => {
+            if (tempPath) {
+                tempPath.remove();
+                tempPath = null;
+            }
+        };
+
         wallTool.onKeyDown = (event) => {
-            if (event.key === 'escape' && drawWalls) {
+            if (event.key === 'escape') {
                 // When 'Esc' is pressed, finalize the current drawing and reset
                 if (wallPath && wallPath.segments.length > 2 && wallPath.firstSegment.point.getDistance(wallPath.lastSegment.point) <= SNAP_THRESHOLD) {
                     // If the end is near the start and the user finalizes, snap it
-                    wallPath.add(wallPath.firstSegment.point);
-                    wallPath.strokeColor = 'black';
-                    wallPath.dashArray = [];
-                    if (tempPath) {
-                        tempPath.remove(); // Remove temporary dashed line
-                    }
-                } else if (tempPath) {
-                    // If there's a tempPath, convert it to a solid line
-                    wallPath.add(tempPath.segments[1].point);
-                    wallPath.strokeColor = 'black';
-                    wallPath.dashArray = [];
-                    tempPath.remove();
+                    wallPath.lastSegment.point = wallPath.firstSegment.point;
                 }
-                // wallPath.simplify(); // Optional, to simplify the path
                 dummyTool.activate(); // Temporarily activate the dummy tool
                 setTimeout(resetAndActivateWallTool, 10); // Reactivate wallTool shortly after
-            }
-        };
-
-        // Update currentLineThickness based on key press
-        wallTool.onKeyDown = (event) => {
-            if (drawWalls) {
-                switch (event.key) {
-                    case '4':
-                        currentLineThickness = 15;
-                        break;
-                    case '5':
-                        currentLineThickness = 20;
-                        break;
-                    case '6':
-                        currentLineThickness = 25;
-                        break;
-                    case 'escape':
-                        // When 'Esc' is pressed, finalize the current drawing and reset
-                        if (wallPath && wallPath.segments.length > 2 && wallPath.firstSegment.point.getDistance(wallPath.lastSegment.point) <= SNAP_THRESHOLD) {
-                            // If the end is near the start and the user finalizes, snap it
-                            wallPath.add(wallPath.firstSegment.point);
-                            wallPath.strokeColor = 'black';
-                            wallPath.dashArray = [];
-                            if (tempPath) {
-                                tempPath.remove(); // Remove temporary dashed line
-                            }
-                        } else if (tempPath) {
-                            // If there's a tempPath, convert it to a solid line
-                            wallPath.add(tempPath.segments[1].point);
-                            wallPath.strokeColor = 'black';
-                            wallPath.dashArray = [];
-                            tempPath.remove();
-                        }
-                        // wallPath.simplify(); // Optional, to simplify the path
-                        dummyTool.activate(); // Temporarily activate the dummy tool
-                        setTimeout(resetAndActivateWallTool, 10); // Reactivate wallTool shortly after
-                        break;
-                    default:
-                        break;
-                }
             }
         };
 

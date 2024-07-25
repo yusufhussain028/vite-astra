@@ -23,6 +23,7 @@ import MailIcon from '@mui/icons-material/Mail';
 import ruler from '../../images/ruler-measurement-icon.png';
 import floorsIcon from '../../images/pngegg.png';
 import pipeIcon from '../../images/pipeline.png';
+import wallIcon from '../../images/wall.png';
 import AdUnitsIcon from '@mui/icons-material/AdUnits';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LayersIcon from '@mui/icons-material/Layers';
@@ -35,7 +36,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import { SketchPicker } from 'react-color';
-import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Snackbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -48,6 +49,7 @@ import goBack from '../../images/go-back.png';
 import drawIcon from '../../images/drawicon.png';
 import ThicknessIcon from '../../images/thickness-icon.png';
 import { useNavigate } from 'react-router-dom';
+import WallTableComponent from '../WallTable/WallTable.jsx';
 
 const drawerWidth = 240;
 
@@ -133,6 +135,7 @@ export default function ResponsiveDrawer() {
     const [colorPickerOpen, setColorPickerOpen] = React.useState(false);
     const [colorPickerPosition, setColorPickerPosition] = React.useState({ top: 50, left: 50 });
     const [gridUnit, setGridUnit] = React.useState('meter');
+    const [snackbarOpen, setSnackbarOpen] = React.useState(false);
 
 
     const customCanvasStyle = {
@@ -185,8 +188,17 @@ export default function ResponsiveDrawer() {
     };
 
     const handleGridScaleValue = (event) => {
-        setGridScaleValue(event.target.value);
+        if (/^\d*\.?\d{0,1}$/.test(event.target.value)) {
+            setGridScaleValue(event.target.value);
+        } else {
+            setSnackbarOpen(true);
+            return;
+        }
     }
+
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
 
     const handleGridScaleUnitChange = (event) => {
         setGridUnit(event.target.value);
@@ -376,7 +388,8 @@ export default function ResponsiveDrawer() {
                         <ListItem key={text} disablePadding>
                             <ListItemButton onClick={() => handleMenuItemClick(text)}>
                                 <ListItemIcon>
-                                    {index === 0 ? <img src={pipeIcon} width='20' height='20' alt='pipeIcon' /> : <MailIcon />}
+                                    {index === 0 ? <img src={pipeIcon} width='20' height='20' alt='pipeIcon' /> : ""}
+                                    {index === 2 ? <img src={wallIcon} width='20' height='20' alt='pipeIcon' /> : ""}
                                 </ListItemIcon>
                                 <ListItemText primary={text} />
                             </ListItemButton>
@@ -537,6 +550,27 @@ export default function ResponsiveDrawer() {
                                 You have already selected the units and cannot select again
                             </Typography>
                         }
+                    </Dialog>
+                )}
+                {modalContent === 'Wall setup' && (
+                    <Dialog
+                        open={modalOpen}
+                        onClose={handleModalClose}
+                        aria-labelledby="modal-title"
+                        aria-describedby="modal-description"
+                        PaperProps={{
+                            style: { width: '900px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
+                        }}
+                    >
+                        <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>WALL TYPES</DialogTitle>
+                        <DialogContent>
+                            <WallTableComponent/>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleModalClose} color="primary">
+                                Close
+                            </Button>
+                        </DialogActions>
                     </Dialog>
                 )}
                 {lineThicknessModal && (
@@ -792,7 +826,7 @@ export default function ResponsiveDrawer() {
                                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                                             <div>Scale</div>
                                             <div>
-                                                <Button variant="contained" color="primary" disabled={!uploadedImage} style={{ fontSize: "8px", marginLeft: "180px" }} onClick={handleChangeScale}>
+                                                <Button variant="contained" color="primary" disabled={isImageMoved} style={{ fontSize: "8px", marginLeft: "180px" }} onClick={handleChangeScale}>
                                                     Change scale
                                                 </Button>
                                             </div>
@@ -801,7 +835,7 @@ export default function ResponsiveDrawer() {
                                             <div>Move Image</div>
                                             <div>
                                                 <Button variant="contained" color={buttonColor} disabled={!uploadedImage} onClick={handleMoveImage} style={{ fontSize: "8px", marginLeft: "142px" }}>
-                                                   {isImageMoved?'DISABLE MOVE':'MOVE IMAGE'}
+                                                    {isImageMoved ? 'DISABLE MOVE' : 'MOVE IMAGE'}
                                                 </Button>
                                             </div>
                                         </div>
@@ -857,6 +891,12 @@ export default function ResponsiveDrawer() {
                         </DialogActions>
                     </Dialog>
                 )}
+                <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={handleSnackbarClose}
+                message="Only one decimal place is allowed."
+            />
             </Main>
         </Box>
     );
