@@ -106,7 +106,6 @@ export default function ResponsiveDrawer() {
     const [transparency, setTransparency] = React.useState(70);
     const [gridTransparency, setGridTransparency] = React.useState(20);
     const [selectedUnits, setSelectedUnits] = React.useState('');
-    const [thicknessValue, setThicknessValue] = React.useState('');
     const [unitsModalOpenCount, setUnitsModalOpenCount] = React.useState(0);
     const [unitsModalAgain, setUnitsModalAgain] = React.useState(false);
     const [unitsDisabled, setUnitsDisabled] = React.useState(false);
@@ -129,7 +128,6 @@ export default function ResponsiveDrawer() {
     const [isImageMoved, setIsImageMoved] = React.useState(false);
     const [buttonColor, setButtonColor] = React.useState('primary');
     const [drawWalls, setDrawWalls] = React.useState(false);
-    const [lineThicknessModal, setLineThicknessModal] = React.useState(false);
     const [gridScaleValue, setGridScaleValue] = React.useState(1);
     const [gridColor, setGridColor] = React.useState('#000000');
     const [colorPickerOpen, setColorPickerOpen] = React.useState(false);
@@ -223,20 +221,12 @@ export default function ResponsiveDrawer() {
         setSelectedUnits(units);
     };
 
-    const handleWallThicknessSelection = (units) => {
-        setThicknessValue(units);
-    };
-
     const handleGoBack = () => {
         navigate('/vite-astra');
     }
 
     const handleDraw = () => {
         setDrawWalls(!drawWalls);
-    }
-
-    const handleWallThickness = () => {
-        setLineThicknessModal(true);
     }
 
     const handleImageSwitchChange = (event) => {
@@ -417,9 +407,6 @@ export default function ResponsiveDrawer() {
                 <IconButton color="primary" onClick={handleDraw} style={{ position: "absolute", top: "1%", left: "92%", zIndex: "999" }}>
                     <img src={drawIcon} height='20' width='20' />
                 </IconButton>
-                <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "1%", left: "89%", zIndex: "999" }}>
-                    <img src={ThicknessIcon} height='20' width='20' />
-                </IconButton>
                 <Box
                     component="main"
                     sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
@@ -474,7 +461,6 @@ export default function ResponsiveDrawer() {
                         toolEnabled={distanceToolEnabled}
                         selectedUnit={selectedUnits}
                         drawWalls={drawWalls}
-                        lineThickness={thicknessValue}
                         gridTransparency={gridTransparency}
                         gridLineColor={gridColor}
                         gridScaleVal={gridScaleValue}
@@ -569,42 +555,6 @@ export default function ResponsiveDrawer() {
                         <DialogActions>
                             <Button onClick={handleModalClose} color="primary">
                                 Close
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
-                )}
-                {lineThicknessModal && (
-                    <Dialog
-                        open={lineThicknessModal}
-                        onClose={() => setLineThicknessModal(false)}
-                        aria-labelledby="modal-title"
-                        aria-describedby="modal-description"
-                        PaperProps={{
-                            style: { width: '400px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
-                        }}
-                    >
-                        <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Select Wall Thickness</DialogTitle>
-                        <DialogContent>
-                            <div style={{ display: "flex", justifyContent: "space-evenly" }}>
-                                <div>
-                                    <div style={{ marginBottom: "10px" }}>Select Units in {selectedUnits}</div>
-                                    <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                                        <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(5)} style={{ backgroundColor: thicknessValue === 5 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 5 ? "#fff" : "#000", marginBottom: "8px" }}>
-                                            5
-                                        </Button>
-                                        <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(10)} style={{ backgroundColor: thicknessValue === 10 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 10 ? "#fff" : "#000", marginBottom: "8px" }}>
-                                            10
-                                        </Button>
-                                        <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(15)} style={{ backgroundColor: thicknessValue === 15 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 15 ? "#fff" : "#000", marginBottom: "8px" }}>
-                                            15
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </DialogContent>
-                        <DialogActions style={{ display: 'flex', justifyContent: 'center' }}>
-                            <Button onClick={() => setLineThicknessModal(false)} color="primary" style={{ backgroundColor: "#666CFF", color: "#fff" }}>
-                                OK
                             </Button>
                         </DialogActions>
                     </Dialog>

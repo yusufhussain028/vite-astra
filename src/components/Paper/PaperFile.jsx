@@ -1,10 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import paper, { Raster, PointText, Layer, Point, Path, Shape } from 'paper';
 import tinycolor from 'tinycolor2';
+import ThicknessIcon from '../../images/thickness-icon.png';
+import ColorPickerIcon from '../../images/colorPicker.jpg'
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import { SketchPicker } from 'react-color';
 import './paperFile.css';
 
 const DrawingTool = ({
-    transparency, canvasStyle, uploadImage, newScale, onDistanceMeasured, toolEnabled, lockedImage, selectedUnit, drawWalls, lineThickness, gridTransparency, gridLineColor, gridScaleVal
+    transparency, canvasStyle, uploadImage, newScale, onDistanceMeasured, toolEnabled, lockedImage, selectedUnit, drawWalls, gridTransparency, gridLineColor, gridScaleVal
 }) => {
     const canvasRef = useRef(null);
     const textLayerRef = useRef(null);
@@ -21,6 +30,13 @@ const DrawingTool = ({
     const [measurementComplete, setMeasurementComplete] = useState(false);
     const [rasterPosition, setRasterPosition] = useState(null);
     const [lockImageFunctFire, setLockImageFuncFire] = useState(true);
+    const [lineThicknessDim, setLineThicknessDim] = useState();
+    const [lineThicknessModal, setLineThicknessModal] = useState(false);
+    const [thicknessValue, setThicknessValue] = useState(5); // Default thickness value
+    const [colorModal, setColorModal] = useState(false);
+    const [gridColor, setGridColor] = useState('#000000');
+    const [colorPickerOpen, setColorPickerOpen] = useState(false);
+    const [colorPickerPosition, setColorPickerPosition] = useState({ top: 50, left: 50 });
 
     let isDragging = false;
     let dragStart = null;
@@ -97,125 +113,137 @@ const DrawingTool = ({
         const dummyTool = new paper.Tool();
 
         let startPoint = null;
-        let wallPath = null;
-        let tempPath = null;
-        let outlinePath = null; // To store the outline path
+        let wallRectangle = null;
+        let tempRectangle = null;
         const SNAP_THRESHOLD = 100; // pixels within which snapping occurs
-        let currentLineThickness = 10; // Default line thickness
-        let lineCount = 0;  // To alternate between solid and dashed lines
+        let rectangles = []; // Array to store drawn rectangles
 
         const resetAndActivateWallTool = () => {
             startPoint = null;  // Reset start point
-            wallPath = null;    // Clear the current path
-            outlinePath = null; // Clear the outline path
+            wallRectangle = null;    // Clear the current rectangle
+            tempRectangle = null; // Clear the temporary rectangle
             wallTool.activate();  // Reactivate wall tool for new input
         };
 
-        const displayDimension = (start, end) => {
-            const distance = start.getDistance(end); // Calculate the distance
-            const midpoint = new Point((start.x + end.x) / 2, (start.y + end.y) / 2); // Find the midpoint
-            let textPoint;
+        const createRectangleFromPoints = (start, end, thickness) => {
+            const vector = end.subtract(start);
+            const unitVector = vector.normalize();
+            const perpendicularVector = new Point(-unitVector.y * thickness / 2, unitVector.x * thickness / 2);
 
-            // Check if the line is more vertical than horizontal
-            if (Math.abs(start.x - end.x) < Math.abs(start.y - end.y)) {
-                // For vertical lines, adjust the text point to the right of the midpoint
-                textPoint = new Point(midpoint.x - 28, midpoint.y);
-            } else {
-                // For horizontal lines, place the text above the line
-                textPoint = new Point(midpoint.x, midpoint.y - 20);
-            }
+            const topLeft = start.add(perpendicularVector);
+            const bottomLeft = start.subtract(perpendicularVector);
+            const topRight = end.add(perpendicularVector);
+            const bottomRight = end.subtract(perpendicularVector);
 
-            const dimensionText = new PointText({
-                point: textPoint,
-                content: `${distance.toFixed(2)} units`, // Add your desired unit here
-                fillColor: 'black',
-                fontFamily: 'Arial',
-                fontWeight: 'bold',
-                fontSize: 12,
-                justification: 'center'
+            return new Path({
+                segments: [topLeft, topRight, bottomRight, bottomLeft],
+                closed: true,
+                strokeColor: 'black',
+                fillColor: 'grey',
+                strokeWidth: 1,
+                fullySelected: false
             });
-            dimensionText.bringToFront();
+        };
+
+        const findSnapPoint = (point) => {
+            for (let i = 0; i < rectangles.length; i++) {
+                const rect = rectangles[i];
+                const endPoint = rect.segments[2].point;
+                if (point.getDistance(endPoint) <= SNAP_THRESHOLD) {
+                    return endPoint;
+                }
+            }
+            return point;
+        };
+
+        const createJoinedRectangle = (start, end, thickness) => {
+            const vector = end.subtract(start);
+            const unitVector = vector.normalize();
+            const perpendicularVector = new Point(-unitVector.y * thickness / 2, unitVector.x * thickness / 2);
+
+            const topLeft = start.add(perpendicularVector);
+            const bottomLeft = start.subtract(perpendicularVector);
+            const topRight = end.add(perpendicularVector);
+            const bottomRight = end.subtract(perpendicularVector);
+
+            return new Path({
+                segments: [topLeft, topRight, bottomRight, bottomLeft],
+                closed: true,
+                strokeColor: 'black',
+                fillColor: 'grey',
+                strokeWidth: 1,
+                fullySelected: false
+            });
+        };
+
+        const adjustForSnap = (rectangles, point, threshold) => {
+            for (let i = 0; i < rectangles.length; i++) {
+                const rect = rectangles[i];
+                for (let j = 0; j < rect.segments.length; j++) {
+                    const segmentPoint = rect.segments[j].point;
+                    if (point.getDistance(segmentPoint) <= threshold) {
+                        return segmentPoint;
+                    }
+                }
+            }
+            return point;
+        };
+
+        const drawTempRectangle = (endPoint, thickness) => {
+            if (rectangles.length > 0) {
+                const previousRect = rectangles[rectangles.length - 1];
+                return createJoinedRectangle(previousRect.segments[2].point, endPoint, thickness); // Use dynamic thicknessValue
+            } else {
+                return createRectangleFromPoints(startPoint, endPoint, thickness); // Use dynamic thicknessValue
+            }
         };
 
         wallTool.onMouseDown = (event) => {
             if (!startPoint) {
                 // First click sets the start point for a new wall
-                startPoint = event.point;
-                wallPath = new Path({
-                    segments: [startPoint],
-                    strokeColor: 'black',
-                    strokeWidth: 15,
-                    fillColor: null,
-                    fullySelected: true
-                });
-
-                // Initialize the outline path with the start point
-                outlinePath = new Path({
-                    segments: [startPoint],
-                    strokeColor: 'black',
-                    strokeWidth: 1,
-                    fillColor: null,
-                    dashArray: [4, 4], // Dashed line pattern
-                    fullySelected: false
-                });
-
+                startPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
             } else {
-                // Subsequent clicks continue adding to the path
-                wallPath.add(event.point);
-                displayDimension(startPoint, event.point); // Display the dimension of the segment
-                startPoint = event.point; // Reset startPoint to the last clicked point
+                // Create a new rectangle from startPoint to the current point
+                const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
+                wallRectangle = drawTempRectangle(endPoint, thicknessValue);
 
-                // Update the outline path with the new segment
-                outlinePath.add(event.point);
-
-                if (wallPath.firstSegment.point.getDistance(event.point) <= SNAP_THRESHOLD) {
-                    // If close to the first point, snap to it and close the outline path
-                    wallPath.add(wallPath.firstSegment.point);
-                    outlinePath.add(wallPath.firstSegment.point);
-                    wallPath.closed = true;
-                    outlinePath.closed = true;
-                    resetAndActivateWallTool();
-                }
+                rectangles.push(wallRectangle); // Store the rectangle
+                startPoint = endPoint; // Reset start point to the end of the current wall
             }
         };
 
         wallTool.onMouseMove = (event) => {
-            if (startPoint && wallPath) {
-                if (tempPath) {
-                    tempPath.remove();
+            if (startPoint) {
+                if (tempRectangle) {
+                    tempRectangle.remove();
                 }
 
-                tempPath = new Path({
-                    segments: [startPoint, event.point],
-                    strokeColor: 'gray',
-                    strokeWidth: 10, // Thicker dashed line
-                    dashArray: [10, 4] // Adjusted dash pattern
-                });
+                // Draw a temporary rectangle as the mouse moves
+                const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
+                tempRectangle = drawTempRectangle(endPoint, thicknessValue);
 
-                if (event.point.getDistance(wallPath.firstSegment.point) <= SNAP_THRESHOLD) {
-                    // If close to the first point, snap to it
-                    tempPath.lastSegment.point = wallPath.firstSegment.point;
-                    tempPath.strokeColor = 'red';
+                tempRectangle.strokeColor = 'grey';
+                tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)'; // Semi-transparent fill
+
+                // Change color if snapping to start point
+                if (startPoint.getDistance(endPoint) <= SNAP_THRESHOLD) {
+                    tempRectangle.strokeColor = 'red';
                 }
             }
         };
 
         wallTool.onMouseUp = (event) => {
-            if (tempPath) {
-                tempPath.remove();
-                tempPath = null;
+            if (tempRectangle) {
+                tempRectangle.remove();
+                tempRectangle = null;
             }
         };
 
         wallTool.onKeyDown = (event) => {
             if (event.key === 'escape') {
-                // When 'Esc' is pressed, finalize the current drawing and reset
-                if (wallPath && wallPath.segments.length > 2 && wallPath.firstSegment.point.getDistance(wallPath.lastSegment.point) <= SNAP_THRESHOLD) {
-                    // If the end is near the start and the user finalizes, snap it
-                    wallPath.lastSegment.point = wallPath.firstSegment.point;
-                }
-                dummyTool.activate(); // Temporarily activate the dummy tool
-                setTimeout(resetAndActivateWallTool, 10); // Reactivate wallTool shortly after
+                // When 'Esc' is pressed, reset the tool and start a new figure
+                rectangles = [];
+                resetAndActivateWallTool();
             }
         };
 
@@ -259,7 +287,6 @@ const DrawingTool = ({
                 setMoveInstruction('Now select the location point');
             } else {
                 // Set the second point and finalize the line
-                debugger
                 secondPoint = event.point;
                 drawMovePointMarker(secondPoint);
                 drawPermanentLine(firstPoint, secondPoint);
@@ -297,7 +324,6 @@ const DrawingTool = ({
         };
 
         function moveImageByVector(from, to) {
-            debugger
             const vector = to.subtract(from);
             if (rasterRef.current) {
                 rasterRef.current.position = rasterRef.current.position.add(vector);
@@ -693,7 +719,7 @@ const DrawingTool = ({
             window.removeEventListener('wheel', handleScroll);
             window.removeEventListener('contextmenu', preventContextMenu);
         };
-    }, [checkImg, transparency, gridTransparency, uploadImage, newScale, imagePosition, toolEnabled, lockedImage, rasterPosition, selectedUnit, drawWalls, lineThickness, gridLineColor, gridScaleVal]);
+    }, [checkImg, transparency, gridTransparency, uploadImage, newScale, imagePosition, toolEnabled, lockedImage, rasterPosition, selectedUnit, drawWalls, gridLineColor, gridScaleVal]); // Remove thicknessValue from dependencies
 
     useEffect(() => {
         if (toolEnabled && checkImg) {
@@ -720,6 +746,180 @@ const DrawingTool = ({
         }
     }, [lockedImage, checkImg]);
 
+    const handleWallThickness = () => {
+        setLineThicknessModal(true);
+    }
+
+    const handleWallThicknessSelection = (units) => {
+        setThicknessValue(units);
+    };
+
+    const handleWallColor = () => {
+        setColorModal(true);
+    }
+
+    const handleColorChange = (color) => {
+        setGridColor(color.hex);
+        setColorPickerOpen(!colorPickerOpen);
+        // You might want to add additional logic to update the grid color in your canvas or other component
+    };
+
+    const handleColorPickerOpen = (event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        setColorPickerPosition({
+            top: rect.top - 220, // Adjust this value as needed
+            left: rect.left,
+        });
+        setColorPickerOpen(!colorPickerOpen);
+    };
+
+    useEffect(() => {
+        const wallTool = new paper.Tool();
+    
+        let startPoint = null;
+        let tempRectangle = null;
+    
+        const SNAP_THRESHOLD = 100; // pixels within which snapping occurs
+        let rectangles = []; // Array to store drawn rectangles
+    
+        const resetAndActivateWallTool = () => {
+            startPoint = null;  // Reset start point
+            tempRectangle = null; // Clear the temporary rectangle
+            wallTool.activate();  // Reactivate wall tool for new input
+        };
+    
+        const createRectangleFromPoints = (start, end, thickness) => {
+            const vector = end.subtract(start);
+            const unitVector = vector.normalize();
+            const perpendicularVector = new Point(-unitVector.y * thickness / 2, unitVector.x * thickness / 2);
+    
+            const topLeft = start.add(perpendicularVector);
+            const bottomLeft = start.subtract(perpendicularVector);
+            const topRight = end.add(perpendicularVector);
+            const bottomRight = end.subtract(perpendicularVector);
+    
+            return new Path({
+                segments: [topLeft, topRight, bottomRight, bottomLeft],
+                closed: true,
+                strokeColor: 'black',
+                fillColor: gridColor,
+                strokeWidth: 1,
+                fullySelected: false
+            });
+        };
+    
+        const findSnapPoint = (point) => {
+            for (let i = 0; i < rectangles.length; i++) {
+                const rect = rectangles[i];
+                const endPoint = rect.segments[1].point;
+                if (point.getDistance(endPoint) <= SNAP_THRESHOLD) {
+                    return endPoint;
+                }
+            }
+            return point;
+        };
+    
+        const createJoinedRectangle = (start, end, thickness) => {
+            const vector = end.subtract(start);
+            const unitVector = vector.normalize();
+            const perpendicularVector = new Point(-unitVector.y * thickness / 2, unitVector.x * thickness / 2);
+    
+            const topLeft = start.add(perpendicularVector);
+            const bottomLeft = start.subtract(perpendicularVector);
+            const topRight = end.add(perpendicularVector);
+            const bottomRight = end.subtract(perpendicularVector);
+    
+            return new Path({
+                segments: [topLeft, topRight, bottomRight, bottomLeft],
+                closed: true,
+                strokeColor: 'black',
+                fillColor: gridColor,
+                strokeWidth: 1,
+                fullySelected: false
+            });
+        };
+    
+        const adjustForSnap = (rectangles, point, threshold) => {
+            for (let i = 0; i < rectangles.length; i++) {
+                const rect = rectangles[i];
+                for (let j = 0; j < rect.segments.length; j++) {
+                    const segmentPoint = rect.segments[j].point;
+                    if (point.getDistance(segmentPoint) <= threshold) {
+                        return segmentPoint;
+                    }
+                }
+            }
+            return point;
+        };
+    
+        const drawTempRectangle = (endPoint, thickness) => {
+            if (rectangles.length > 0) {
+                const previousRect = rectangles[rectangles.length - 1];
+                return createJoinedRectangle(previousRect.segments[1].point, endPoint, thickness); // Use dynamic thicknessValue
+            } else {
+                return createRectangleFromPoints(startPoint, endPoint, thickness); // Use dynamic thicknessValue
+            }
+        };
+    
+        wallTool.onMouseDown = (event) => {
+            if (!startPoint) {
+                // First click sets the start point for a new wall
+                startPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
+            } else {
+                // Create a new rectangle from startPoint to the current point
+                const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
+                const wallRectangle = drawTempRectangle(endPoint, thicknessValue); // Use dynamic thicknessValue
+    
+                rectangles.push(wallRectangle); // Store the rectangle
+                startPoint = endPoint; // Reset start point to the end of the current wall
+            }
+        };
+    
+        wallTool.onMouseMove = (event) => {
+            if (startPoint) {
+                if (tempRectangle) {
+                    tempRectangle.remove();
+                }
+    
+                // Draw a temporary rectangle as the mouse moves
+                const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
+                tempRectangle = drawTempRectangle(endPoint, thicknessValue); // Use dynamic thicknessValue
+    
+                tempRectangle.strokeColor = gridColor;
+                tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)'; // Semi-transparent fill
+    
+                // Change color if snapping to start point
+                if (startPoint.getDistance(endPoint) <= SNAP_THRESHOLD) {
+                    tempRectangle.strokeColor = 'red';
+                }
+            }
+        };
+    
+        wallTool.onMouseUp = (event) => {
+            if (tempRectangle) {
+                tempRectangle.remove();
+                tempRectangle = null;
+            }
+        };
+    
+        wallTool.onKeyDown = (event) => {
+            if (event.key === 'escape') {
+                // When 'Esc' is pressed, reset the tool and start a new figure
+                rectangles = [];
+                resetAndActivateWallTool();
+            }
+        };
+    
+        // Assign wallTool to a ref to switch between tools if needed
+        // This allows for toggling the wall drawing functionality
+        if (drawWalls) {
+            wallTool.activate();
+        } else {
+            console.log('test'); // Default tool for other functionalities
+        }
+    }, [thicknessValue, drawWalls]);
+    
+
     const handleSaveCanvas = () => {
         const canvas = canvasRef.current;
         if (canvas) {
@@ -743,6 +943,90 @@ const DrawingTool = ({
                 {moveInstruction && <div className="instruction-text">{moveInstruction}</div>}
             </>
             {/* <button onClick={handleSaveCanvas}>Save Canvas</button> */}
+            <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "2%", left: "98%", zIndex: "999" }}>
+                <img src={ThicknessIcon} height='20' width='20' />
+            </IconButton>
+            {lineThicknessModal && (
+                <Dialog
+                    open={lineThicknessModal}
+                    onClose={() => setLineThicknessModal(false)}
+                    aria-labelledby="modal-title"
+                    aria-describedby="modal-description"
+                    PaperProps={{
+                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
+                    }}
+                >
+                    <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Select Wall Thickness</DialogTitle>
+                    <DialogContent>
+                        <div style={{ display: "flex", justifyContent: "space-evenly" }}>
+                            <div>
+                                <div style={{ marginBottom: "10px" }}>Select Units</div>
+                                <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                                    <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(5)} style={{ backgroundColor: thicknessValue === 5 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 5 ? "#fff" : "#000", marginBottom: "8px" }}>
+                                        5
+                                    </Button>
+                                    <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(10)} style={{ backgroundColor: thicknessValue === 10 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 10 ? "#fff" : "#000", marginBottom: "8px" }}>
+                                        15
+                                    </Button>
+                                    <Button variant="contained" color="primary" onClick={() => handleWallThicknessSelection(15)} style={{ backgroundColor: thicknessValue === 15 ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: thicknessValue === 15 ? "#fff" : "#000", marginBottom: "8px" }}>
+                                        25
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </DialogContent>
+                    <DialogActions style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button onClick={() => setLineThicknessModal(false)} color="primary" style={{ backgroundColor: "#666CFF", color: "#fff" }}>
+                            OK
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+            <IconButton color="primary" onClick={handleWallColor} style={{ position: "absolute", top: "2%", left: "94%", zIndex: "999" }}>
+                <img src={ColorPickerIcon} height='20' width='20' />
+            </IconButton>
+            {colorModal && (
+                <Dialog
+                    open={colorModal}
+                    onClose={() => setColorModal(false)}
+                    aria-labelledby="modal-title"
+                    aria-describedby="modal-description"
+                    PaperProps={{
+                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
+                    }}
+                >
+                    <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Select Wall Color</DialogTitle>
+                    <DialogContent>
+                        <div style={{ display: "flex", justifyContent: "space-evenly" }}>
+                            <div
+                                style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    marginRight: '5px',
+                                    backgroundColor: gridColor,
+                                    cursor: 'pointer',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px'
+                                }}
+                                onClick={handleColorPickerOpen}
+                            />
+                            {colorPickerOpen && (
+                                <div style={{ zIndex: 999 }}>
+                                    <SketchPicker
+                                        color={gridColor}
+                                        onChangeComplete={handleColorChange}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                    <DialogActions style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button onClick={() => setColorModal(false)} color="primary" style={{ backgroundColor: "#666CFF", color: "#fff" }}>
+                            OK
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
         </div>
     );
 };
