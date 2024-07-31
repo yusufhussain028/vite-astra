@@ -105,7 +105,7 @@ export default function ResponsiveDrawer() {
     const [settingsOpen, setSettingsOpen] = React.useState(false);
     const [transparency, setTransparency] = React.useState(70);
     const [gridTransparency, setGridTransparency] = React.useState(20);
-    const [selectedUnits, setSelectedUnits] = React.useState('');
+    const [selectedUnits, setSelectedUnits] = React.useState('meter');
     const [unitsModalOpenCount, setUnitsModalOpenCount] = React.useState(0);
     const [unitsModalAgain, setUnitsModalAgain] = React.useState(false);
     const [unitsDisabled, setUnitsDisabled] = React.useState(false);
@@ -134,6 +134,7 @@ export default function ResponsiveDrawer() {
     const [colorPickerPosition, setColorPickerPosition] = React.useState({ top: 50, left: 50 });
     const [gridUnit, setGridUnit] = React.useState('meter');
     const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+    const [walls, setWalls] = React.useState([]);
 
 
     const customCanvasStyle = {
@@ -320,6 +321,10 @@ export default function ResponsiveDrawer() {
         setColorPickerOpen(!colorPickerOpen);
     };
 
+    const handleUpdateWalls = (newWalls) => {
+        setWalls(newWalls);
+    };
+
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
@@ -464,6 +469,7 @@ export default function ResponsiveDrawer() {
                         gridTransparency={gridTransparency}
                         gridLineColor={gridColor}
                         gridScaleVal={gridScaleValue}
+                        walls={walls}
                     />
                 </Box>
                 {modalContent === 'Floors' && (
@@ -505,6 +511,9 @@ export default function ResponsiveDrawer() {
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                         <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('in')} style={{ backgroundColor: selectedUnits === 'in' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'in' ? "#fff" : "#000", marginBottom: "8px" }}>
                                             in
+                                        </Button>
+                                        <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('feet')} style={{ backgroundColor: selectedUnits === 'feet' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'feet' ? "#fff" : "#000", marginBottom: "8px" }}>
+                                            feet
                                         </Button>
                                     </div>
                                 </div>
@@ -550,7 +559,7 @@ export default function ResponsiveDrawer() {
                     >
                         <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>WALL TYPES</DialogTitle>
                         <DialogContent>
-                            <WallTableComponent/>
+                            <WallTableComponent onUpdateWalls={handleUpdateWalls} />
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={handleModalClose} color="primary">
@@ -842,11 +851,11 @@ export default function ResponsiveDrawer() {
                     </Dialog>
                 )}
                 <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={3000}
-                onClose={handleSnackbarClose}
-                message="Only one decimal place is allowed."
-            />
+                    open={snackbarOpen}
+                    autoHideDuration={3000}
+                    onClose={handleSnackbarClose}
+                    message="Only one decimal place is allowed."
+                />
             </Main>
         </Box>
     );

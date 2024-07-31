@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     DetailsList,
     DetailsListLayoutMode,
@@ -11,7 +11,6 @@ import {
 } from '@fluentui/react';
 import TextField from '@mui/material/TextField';
 import { SketchPicker } from 'react-color';
-import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { useBoolean } from '@fluentui/react-hooks';
 import {
     EditRegular,
@@ -25,21 +24,29 @@ const initialItems = [
         key: '1',
         file: { label: 'Invisible Patter' },
         author: { label: 'IP' },
-        lastUpdated: { label: '1 in' },
+        lastUpdated: { label: '20' },
         lastUpdate: { label: 'Blank', icon: <EditRegular /> },
-        color: '#000000',
+        color: '#808080',
     },
     {
         key: '2',
         file: { label: 'Exterior Wall 1' },
         author: { label: 'CE1' },
-        lastUpdated: { label: '4 in' },
+        lastUpdated: { label: '15' },
         lastUpdate: { label: 'Solid', icon: <OpenRegular /> },
-        color: '#000000',
+        color: '#00FF00',
+    },
+    {
+        key: '3',
+        file: { label: 'Interior Wall 1' },
+        author: { label: 'DE1' },
+        lastUpdated: { label: '30' },
+        lastUpdate: { label: 'Solid', icon: <OpenRegular /> },
+        color: '#FF4500',
     }
 ];
 
-const WallTableComponent = () => {
+const WallTableComponent = ({ onUpdateWalls }) => {
     const [items, setItems] = useState(initialItems);
     const [isModalOpen, { setTrue: showModal, setFalse: hideModal }] = useBoolean(false);
     const [newFileLabel, setNewFileLabel] = useState('');
@@ -50,6 +57,10 @@ const WallTableComponent = () => {
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const [wallColor, setWallColor] = useState('#000000');
     const [colorPickerPosition, setColorPickerPosition] = useState({ top: 50, left: 50 });
+
+    useEffect(() => {
+        onUpdateWalls(items);
+    }, [items, onUpdateWalls]);
 
     const handleAddFile = () => {
         setItems([
