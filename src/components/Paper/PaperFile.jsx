@@ -635,34 +635,41 @@ const DrawingTool = ({
     };
 
     useEffect(() => {
-        console.log('walls :', walls)
-    })
-
-    useEffect(() => {
         const wallTool = new paper.Tool();
-
+    
         let startPoint = null;
         let tempRectangle = null;
         let polygonPoints = []; // Points of the polygon
         let wallColors = []; // Array to store colors of each wall segment
         const SNAP_THRESHOLD = 100; // pixels within which snapping occurs
         const rectangles = []; // Array to store drawn rectangles
-
-        const addWallData = (area, colors, roomLabel) => {
+        const roomLabelFields = []; // Array to store room label fields
+    
+        const addWallData = (area, colors, roomLabel, id) => {
             const newWallData = {
+                id,
                 area: `${area.toFixed(2)} ${selectedUnit}²`,
-                colors: [...colors], // Ensure colors are stored correctly
+                colors: colors ? [...colors] : [], // Ensure colors are stored correctly
                 roomLabel: roomLabel,
             };
-            setWallData((prevData) => [...prevData, newWallData]);
+            setWallData((prevData) => {
+                const index = prevData.findIndex((data) => data.id === id);
+                if (index !== -1) {
+                    const updatedData = [...prevData];
+                    updatedData[index] = newWallData;
+                    return updatedData;
+                } else {
+                    return [...prevData, newWallData];
+                }
+            });
         };
-
+    
         const resetAndActivateWallTool = () => {
             startPoint = null; // Reset start point
             tempRectangle = null; // Clear the temporary rectangle
             wallTool.activate(); // Reactivate wall tool for new input
         };
-
+    
         const createRectangleFromPoints = (start, end, thickness) => {
             const vector = end.subtract(start);
             const unitVector = vector.normalize();
@@ -670,12 +677,12 @@ const DrawingTool = ({
                 (-unitVector.y * thickness) / 2,
                 (unitVector.x * thickness) / 2,
             );
-
+    
             const topLeft = start.add(perpendicularVector);
             const bottomLeft = start.subtract(perpendicularVector);
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
-
+    
             return new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
@@ -685,7 +692,7 @@ const DrawingTool = ({
                 fullySelected: false,
             });
         };
-
+    
         const findSnapPoint = (point) => {
             for (let i = 0; i < rectangles.length; i++) {
                 const rect = rectangles[i];
@@ -696,7 +703,7 @@ const DrawingTool = ({
             }
             return point;
         };
-
+    
         const createJoinedRectangle = (start, end, thickness) => {
             const vector = end.subtract(start);
             const unitVector = vector.normalize();
@@ -704,12 +711,12 @@ const DrawingTool = ({
                 (-unitVector.y * thickness) / 2,
                 (unitVector.x * thickness) / 2,
             );
-
+    
             const topLeft = start.add(perpendicularVector);
             const bottomLeft = start.subtract(perpendicularVector);
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
-
+    
             return new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
@@ -719,7 +726,7 @@ const DrawingTool = ({
                 fullySelected: false,
             });
         };
-
+    
         const adjustForSnap = (rectangles, point, threshold) => {
             for (let i = 0; i < rectangles.length; i++) {
                 const rect = rectangles[i];
@@ -732,7 +739,7 @@ const DrawingTool = ({
             }
             return point;
         };
-
+    
         const drawTempRectangle = (endPoint, thickness) => {
             if (rectangles.length > 0) {
                 const previousRect = rectangles[rectangles.length - 1];
@@ -741,12 +748,12 @@ const DrawingTool = ({
                 return createRectangleFromPoints(startPoint, endPoint, thickness); // Use dynamic thicknessValue
             }
         };
-
+    
         const calculateDistance = (start, end) => {
             const distanceInPixels = start.getDistance(end);
             return distanceInPixels / (5.6 / SCALE_FACTOR); // Convert pixels to selected unit
         };
-
+    
         const calculateArea = (points) => {
             let area = 0;
             for (let i = 0; i < points.length; i++) {
@@ -757,18 +764,18 @@ const DrawingTool = ({
             area = Math.abs(area) / 2;
             return area;
         };
-
+    
         const drawDimensionText = (start, end) => {
             const midpoint = new Point((start.x + end.x) / 2, (start.y + end.y) / 2);
             const offset = 15; // Adjust this value to move the text above the wall
             const angle = Math.atan2(end.y - start.y, end.x - start.x); // Angle of the wall segment
             const isVertical = Math.abs(angle) > Math.PI / 4 && Math.abs(angle) < (3 * Math.PI) / 4;
-
+    
             // If the wall is vertical, adjust the position to the right of the midpoint
             const adjustedPoint = isVertical
                 ? new Point(midpoint.x + offset, midpoint.y)
                 : new Point(midpoint.x, midpoint.y - offset); // Adjust position based on the angle
-
+    
             const distance = calculateDistance(start, end).toFixed(2);
             const unit = selectedUnit;
             const text = new PointText({
@@ -779,10 +786,10 @@ const DrawingTool = ({
             });
             textLayerRef.current.addChild(text);
         };
-
-        const drawRoomLabel = (points, onLabelChange) => {
+    
+        const drawRoomLabel = (points, onLabelChange, id) => {
             const center = points.reduce((sum, point) => sum.add(point), new Point(0, 0)).divide(points.length);
-
+    
             const textField = document.createElement('input');
             textField.type = 'text';
             textField.style.width = '70px';
@@ -793,12 +800,64 @@ const DrawingTool = ({
             textField.style.transform = 'translate(-50%, -50%)';
             textField.style.zIndex = '1000';
             textField.addEventListener('change', onLabelChange);
-
+    
             document.body.appendChild(textField);
-
+            roomLabelFields.push({ id, textField });
+    
             return textField;
         };
-
+    
+        const removeRoomLabel = (labelField) => {
+            if (labelField) {
+                document.body.removeChild(labelField.textField);
+            }
+        };
+    
+        const createNewRoomLabels = (polygonPoints1, polygonPoints2, id1, id2) => {
+            const onLabelChange1 = (event) => {
+                const roomLabel = event.target.value;
+                addWallData(calculateArea(polygonPoints1), wallColors, roomLabel, id1);
+            };
+    
+            const onLabelChange2 = (event) => {
+                const roomLabel = event.target.value;
+                addWallData(calculateArea(polygonPoints2), wallColors, roomLabel, id2);
+            };
+    
+            const label1 = drawRoomLabel(polygonPoints1, onLabelChange1, id1);
+            const label2 = drawRoomLabel(polygonPoints2, onLabelChange2, id2);
+    
+            roomLabelFields.push(label1, label2);
+        };
+    
+        const splitPolygon = (polygon, dividingLine) => {
+            const polygonPoints1 = [];
+            const polygonPoints2 = [];
+    
+            let addToFirst = true;
+    
+            for (let i = 0; i < polygon.length; i++) {
+                if (polygon[i].equals(dividingLine[0]) || polygon[i].equals(dividingLine[1])) {
+                    addToFirst = !addToFirst;
+                    polygonPoints1.push(polygon[i]);
+                    polygonPoints2.push(polygon[i]);
+                    if (polygon[i].equals(dividingLine[0])) {
+                        polygonPoints1.push(dividingLine[1]);
+                    } else {
+                        polygonPoints2.push(dividingLine[0]);
+                    }
+                } else {
+                    if (addToFirst) {
+                        polygonPoints1.push(polygon[i]);
+                    } else {
+                        polygonPoints2.push(polygon[i]);
+                    }
+                }
+            }
+    
+            return [polygonPoints1, polygonPoints2];
+        };
+    
         wallTool.onMouseDown = (event) => {
             if (!startPoint) {
                 // First click sets the start point for a new wall
@@ -809,46 +868,47 @@ const DrawingTool = ({
                 // Create a new rectangle from startPoint to the current point
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
                 const wallRectangle = drawTempRectangle(endPoint, selectedWall.thickness); // Use dynamic thicknessValue
-
+    
                 rectangles.push(wallRectangle); // Store the rectangle
                 shapesLayerRef.current.addChild(wallRectangle); // Add to shapes layer
                 drawDimensionText(startPoint, endPoint); // Draw dimension text
                 startPoint = endPoint; // Reset start point to the end of the current wall
-
+    
                 polygonPoints.push(endPoint);
                 wallColors.push(selectedWall.color); // Store the color of the current segment
-
+    
                 if (polygonPoints.length > 2 && endPoint.getDistance(polygonPoints[0]) <= SNAP_THRESHOLD) {
                     // Close the polygon
                     const area = calculateArea(polygonPoints);
-
+    
+                    const id = Math.random().toString(36).substr(2, 9); // Generate a unique ID for the polygon
                     const onLabelChange = (event) => {
                         const roomLabel = event.target.value;
-                        addWallData(area, wallColors, roomLabel);
-                        wallColors = [];
+                        addWallData(area, wallColors, roomLabel, id);
+                        // Do not reset wallColors here
                     };
-
-                    drawRoomLabel(polygonPoints, onLabelChange); // Draw room label text field inside the closed polygon
-
+    
+                    drawRoomLabel(polygonPoints, onLabelChange, id); // Draw room label text field inside the closed polygon
+    
                     polygonPoints = []; // Reset points for the next polygon
                     resetAndActivateWallTool();
                 }
             }
         };
-
+    
         wallTool.onMouseMove = (event) => {
             if (startPoint) {
                 if (tempRectangle) {
                     tempRectangle.remove();
                 }
-
+    
                 // Draw a temporary rectangle as the mouse moves
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
                 tempRectangle = drawTempRectangle(endPoint, selectedWall.thickness); // Use dynamic thicknessValue
-
+    
                 tempRectangle.strokeColor = selectedWall.color;
                 tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)'; // Semi-transparent fill
-
+    
                 // Change color if snapping to start point
                 if (startPoint.getDistance(endPoint) <= SNAP_THRESHOLD) {
                     tempRectangle.strokeColor = 'red';
@@ -856,14 +916,14 @@ const DrawingTool = ({
                 shapesLayerRef.current.addChild(tempRectangle); // Add temp rectangle to shapes layer
             }
         };
-
+    
         wallTool.onMouseUp = (event) => {
             if (tempRectangle) {
                 tempRectangle.remove();
                 tempRectangle = null;
             }
         };
-
+    
         wallTool.onKeyDown = (event) => {
             if (event.key === 'escape') {
                 // When 'Esc' is pressed, reset the tool and start a new figure
@@ -872,13 +932,16 @@ const DrawingTool = ({
                 resetAndActivateWallTool();
             }
         };
-
+    
         if (drawWalls) {
             wallTool.activate();
         } else {
             console.log('test'); // Default tool for other functionalities
         }
     }, [selectedWall, drawWalls, selectedUnit, gridColor, thicknessValue]);
+    
+    
+
 
     const handleRoomScheduleClick = () => {
         setScheduleModalOpen(true);
