@@ -10,6 +10,7 @@ import {
     Stack,
 } from '@fluentui/react';
 import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
 import { SketchPicker } from 'react-color';
 import { useBoolean } from '@fluentui/react-hooks';
 import {
@@ -32,7 +33,7 @@ const initialItems = [
         key: '2',
         file: { label: 'Exterior Wall 1' },
         author: { label: 'CE1' },
-        lastUpdated: { label: '15' },
+        lastUpdated: { label: '25' },
         lastUpdate: { label: 'Solid', icon: <OpenRegular /> },
         color: '#00FF00',
     },
@@ -40,19 +41,18 @@ const initialItems = [
         key: '3',
         file: { label: 'Interior Wall 1' },
         author: { label: 'DE1' },
-        lastUpdated: { label: '30' },
+        lastUpdated: { label: '15' },
         lastUpdate: { label: 'Solid', icon: <OpenRegular /> },
-        color: '#FF4500',
+        color: '#FFA500',
     }
 ];
 
-const WallTableComponent = ({ onUpdateWalls }) => {
+const WallTableComponent = ({ onUpdateWalls, wallUnit }) => {
     const [items, setItems] = useState(initialItems);
     const [isModalOpen, { setTrue: showModal, setFalse: hideModal }] = useBoolean(false);
     const [newFileLabel, setNewFileLabel] = useState('');
     const [newFileAbbrevation, setNewFileAbbrevation] = useState('');
     const [thickness, setThickness] = useState('');
-    const [wallUnit, setWallUnit] = useState('');
     const [selectedItems, setSelectedItems] = useState([]);
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
     const [wallColor, setWallColor] = useState('#000000');
@@ -69,7 +69,7 @@ const WallTableComponent = ({ onUpdateWalls }) => {
                 key: (items.length + 1).toString(),
                 file: { label: newFileLabel },
                 author: { label: newFileAbbrevation },
-                lastUpdated: { label: thickness },
+                lastUpdated: { label: `${thickness} ${wallUnit}` },
                 lastUpdate: { label: 'Created new', icon: <EditRegular /> },
                 color: wallColor,
             },
@@ -270,6 +270,9 @@ const WallTableComponent = ({ onUpdateWalls }) => {
                             margin="dense"
                             InputLabelProps={{
                                 shrink: true,
+                            }}
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end">{wallUnit}</InputAdornment>,
                             }}
                             inputProps={{
                                 style: {

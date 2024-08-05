@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
@@ -36,7 +37,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import { SketchPicker } from 'react-color';
-import { FormControl, InputLabel, Select, MenuItem, Snackbar } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Snackbar, SnackbarContent } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -106,6 +107,7 @@ export default function ResponsiveDrawer() {
     const [transparency, setTransparency] = React.useState(70);
     const [gridTransparency, setGridTransparency] = React.useState(20);
     const [selectedUnits, setSelectedUnits] = React.useState('meter');
+    const [wallUnit, setWallUnit] = React.useState();
     const [unitsModalOpenCount, setUnitsModalOpenCount] = React.useState(0);
     const [unitsModalAgain, setUnitsModalAgain] = React.useState(false);
     const [unitsDisabled, setUnitsDisabled] = React.useState(false);
@@ -134,6 +136,8 @@ export default function ResponsiveDrawer() {
     const [colorPickerPosition, setColorPickerPosition] = React.useState({ top: 50, left: 50 });
     const [gridUnit, setGridUnit] = React.useState('meter');
     const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+    const [moveSnackbarOpen, setMoveSnackbarOpen] = React.useState(false);
+    const [unitSnackbarOpen, setUnitSnackbarOpen] = React.useState(false);
     const [walls, setWalls] = React.useState([]);
 
 
@@ -165,7 +169,14 @@ export default function ResponsiveDrawer() {
     };
 
     const handleModalClose = () => {
-        setModalOpen(false);
+        debugger;
+        if(selectedUnits == 'meter'){
+            setUnitSnackbarOpen(true);
+        }
+        else{
+            setModalOpen(false);
+            setUnitSnackbarOpen(false);
+        }
     };
 
     const handleSettingsClick = (event) => {
@@ -219,11 +230,16 @@ export default function ResponsiveDrawer() {
     };
 
     const handleUnitsSelection = (units) => {
+        if (units === 'in' || units === 'feet') {
+            setWallUnit('in'); // Default to inches if an Imperial unit is selected
+        } else if (units === 'cm' || units === 'mm') {
+            setWallUnit('mm'); // Default to millimeters if a Metric unit is selected
+        }
         setSelectedUnits(units);
     };
 
     const handleGoBack = () => {
-        navigate('/vite-astra');
+        navigate('/');
     }
 
     const handleDraw = () => {
@@ -238,10 +254,11 @@ export default function ResponsiveDrawer() {
         setGridSwitch(event.target.checked);
     }
 
-    const handleMoveImage = () => {
+    const handleMoveImage = (e) => {
         setMoveImage(!moveImage);
         setIsImageMoved(!isImageMoved);
         setButtonColor(isImageMoved ? 'primary' : 'secondary');
+        setMoveSnackbarOpen(!moveImage);
     }
 
     const handleUploadClick = () => {
@@ -324,6 +341,12 @@ export default function ResponsiveDrawer() {
     const handleUpdateWalls = (newWalls) => {
         setWalls(newWalls);
     };
+
+    // Open the unit modal by default on the first render
+    useEffect(() => {
+        setModalOpen(true);
+        setModalContent('Units');
+    }, []); // Empty dependency array ensures this runs only once on mount
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -470,6 +493,7 @@ export default function ResponsiveDrawer() {
                         gridLineColor={gridColor}
                         gridScaleVal={gridScaleValue}
                         walls={walls}
+                        wallUnit={wallUnit}
                     />
                 </Box>
                 {modalContent === 'Floors' && (
@@ -559,7 +583,7 @@ export default function ResponsiveDrawer() {
                     >
                         <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>WALL TYPES</DialogTitle>
                         <DialogContent>
-                            <WallTableComponent onUpdateWalls={handleUpdateWalls} />
+                            <WallTableComponent onUpdateWalls={handleUpdateWalls} wallUnit={wallUnit} />
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={handleModalClose} color="primary">
@@ -623,17 +647,28 @@ export default function ResponsiveDrawer() {
                                             />
                                             <FormControl variant="outlined" style={{ marginLeft: '8px', width: '33%', marginTop: '10px' }}>
                                                 <InputLabel>Unit</InputLabel>
-                                                <Select
-                                                    value={gridUnit}
-                                                    onChange={handleGridScaleUnitChange}
-                                                    label="Unit"
-                                                >
-                                                    <MenuItem value="meter">METERS</MenuItem>
-                                                    <MenuItem value="cm">CM</MenuItem>
-                                                    <MenuItem value="mm">MM</MenuItem>
-                                                    <MenuItem value="feet">FEET</MenuItem>
-                                                    <MenuItem value="in">INCHES</MenuItem>
-                                                </Select>
+                                                {selectedUnits != '' && selectedUnits != 'meter' ? (
+                                                    <Select
+                                                        value={gridUnit}
+                                                        onChange={handleGridScaleUnitChange}
+                                                        label="Unit"
+                                                        disabled={true}
+                                                    >
+                                                        <MenuItem value="meter">{selectedUnits}</MenuItem>
+                                                    </Select>
+                                                ) : (
+                                                    <Select
+                                                        value={gridUnit}
+                                                        onChange={handleGridScaleUnitChange}
+                                                        label="Unit"
+                                                    >
+                                                        <MenuItem value="meter">METERS</MenuItem>
+                                                        <MenuItem value="cm">CM</MenuItem>
+                                                        <MenuItem value="mm">MM</MenuItem>
+                                                        <MenuItem value="feet">FEET</MenuItem>
+                                                        <MenuItem value="in">INCHES</MenuItem>
+                                                    </Select>
+                                                )}
                                             </FormControl>
                                         </div>
                                         <div>
@@ -793,7 +828,7 @@ export default function ResponsiveDrawer() {
                                         <div style={{ display: "flex", marginTop: "10px", justifyContent: "space-between" }}>
                                             <div>Move Image</div>
                                             <div>
-                                                <Button variant="contained" color={buttonColor} disabled={!uploadedImage} onClick={handleMoveImage} style={{ fontSize: "8px", marginLeft: "142px" }}>
+                                                <Button variant="contained" color={buttonColor} disabled={!uploadedImage} onClick={(e) => handleMoveImage(e)} style={{ fontSize: "8px", marginLeft: "142px" }}>
                                                     {isImageMoved ? 'DISABLE MOVE' : 'MOVE IMAGE'}
                                                 </Button>
                                             </div>
@@ -855,7 +890,38 @@ export default function ResponsiveDrawer() {
                     autoHideDuration={3000}
                     onClose={handleSnackbarClose}
                     message="Only one decimal place is allowed."
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    style={{ marginTop: '30px' }}
                 />
+                <Snackbar
+                    open={moveSnackbarOpen}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    style={{ marginTop: '25px' }}
+                >
+                    <SnackbarContent
+                        style={{ whiteSpace: 'pre-line' }}
+                        message={
+                            <span style={{ display: 'block', maxWidth: '300px', wordWrap: 'break-word' }}>
+                                Move image function is active, once you are satisfied with the image location
+                                please click on “Disable Move” to deactivate the function.
+                            </span>
+                        }
+                    />
+                </Snackbar>
+                <Snackbar
+                    open={unitSnackbarOpen}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    style={{ marginTop: '25px' }}
+                >
+                    <SnackbarContent
+                        style={{ whiteSpace: 'pre-line' }}
+                        message={
+                            <span style={{ display: 'block', maxWidth: '300px', wordWrap: 'break-word' }}>
+                                Select atleast one unit to proceed further.
+                            </span>
+                        }
+                    />
+                </Snackbar>
             </Main>
         </Box>
     );

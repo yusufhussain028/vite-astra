@@ -46,6 +46,7 @@ const DrawingTool = ({
     const [drawnRectangles, setDrawnRectangles] = useState([]); // State to store drawn rectangles
     const [selectedValue, setSelectedValue] = useState(''); // State for dropdown
     const [selectedWall, setSelectedWall] = useState([]);
+    const [roomNumber, setRoomNumber] = useState(1); // Initial room number
 
 
     let isDragging = false;
@@ -437,62 +438,65 @@ const DrawingTool = ({
             const gridLayer = gridLayerRef.current;
             gridLayer.removeChildren();
             const bounds = paper.view.bounds;
+
             // Determine the spacing based on the selected unit
             if (gridScaleVal <= 0) {
-                return
+                return;
             }
+
             let spacing;
-            if (selectedUnit === 'in') {
-                spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 inch = 2.54 cm
-            } else if (selectedUnit === 'cm') {
-                spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 cm = 10 pixels
-            } else if (selectedUnit === 'mm') {
-                spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 mm = 1 pixel
-            } else if (selectedUnit === 'feet') {
-                spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 3.2 feet = 1 mter
-            } else if (selectedUnit === 'meter') {
-                spacing = (5.6 * gridScaleVal) // 1 meter = 5.6 pixel 
-            } else {
-                spacing = 5.6; // 1 meter as default
+            switch (selectedUnit) {
+                case 'in':
+                    spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 inch = 2.54 cm
+                    break;
+                case 'cm':
+                    spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 cm = 10 pixels
+                    break;
+                case 'mm':
+                    spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 1 mm = 1 pixel
+                    break;
+                case 'feet':
+                    spacing = (5.6 * gridScaleVal) / SCALE_FACTOR; // 3.2 feet = 1 meter
+                    break;
+                case 'meter':
+                    spacing = (5.6 * gridScaleVal); // 1 meter = 5.6 pixels
+                    break;
+                default:
+                    spacing = 5.6; // 1 meter as default
             }
 
             const gridTransparencyVal = gridTransparency / 100; // Assuming gridTransparencyValue is a percentage (0-100)
             const gridColorRgba = hexToRgbaString(gridLineColor, gridTransparencyVal);
 
+            // Define a function to determine if a position is the closest to the center
+            const isClosestToCenter = (pos, center, spacing) => {
+                return Math.abs(pos - center) < spacing / 2;
+            };
+
+            // Center of the view
+            const centerX = paper.view.center.x;
+            const centerY = paper.view.center.y;
+
+            // Draw vertical grid lines
             for (let x = bounds.left; x <= bounds.right; x += spacing) {
                 const start = new Point(x, bounds.top);
                 const end = new Point(x, bounds.bottom);
                 const line = new Path.Line(start, end);
-                line.strokeColor = new paper.Color(gridColorRgba);
-                line.strokeWidth = 0.5 / paper.view.zoom; // Adjust thickness based on zoom
+                line.strokeColor = isClosestToCenter(x, centerX, spacing) ? 'red' : new paper.Color(gridColorRgba);
+                line.strokeWidth = isClosestToCenter(x, centerX, spacing) ? 1 / paper.view.zoom : 0.5 / paper.view.zoom;
                 gridLayer.addChild(line);
             }
 
+            // Draw horizontal grid lines
             for (let y = bounds.top; y <= bounds.bottom; y += spacing) {
                 const start = new Point(bounds.left, y);
                 const end = new Point(bounds.right, y);
                 const line = new Path.Line(start, end);
-                line.strokeColor = new paper.Color(gridColorRgba);
-                line.strokeWidth = 0.5 / paper.view.zoom; // Adjust thickness based on zoom
+                line.strokeColor = isClosestToCenter(y, centerY, spacing) ? 'red' : new paper.Color(gridColorRgba);
+                line.strokeWidth = isClosestToCenter(y, centerY, spacing) ? 1 / paper.view.zoom : 0.5 / paper.view.zoom;
                 gridLayer.addChild(line);
             }
 
-            // Draw reference lines for x-axis and y-axis
-            const xAxis = new Path.Line(
-                new Point(bounds.left, paper.view.center.y),
-                new Point(bounds.right, paper.view.center.y),
-            );
-            xAxis.strokeColor = 'blue';
-            xAxis.strokeWidth = 1 / paper.view.zoom; // Adjust thickness based on zoom
-            gridLayer.addChild(xAxis);
-
-            const yAxis = new Path.Line(
-                new Point(paper.view.center.x, bounds.top),
-                new Point(paper.view.center.x, bounds.bottom),
-            );
-            yAxis.strokeColor = 'blue';
-            yAxis.strokeWidth = 1 / paper.view.zoom; // Adjust thickness based on zoom
-            gridLayer.addChild(yAxis);
             gridLayer.bringToFront();
         };
 
@@ -636,21 +640,23 @@ const DrawingTool = ({
 
     useEffect(() => {
         const wallTool = new paper.Tool();
-    
+
         let startPoint = null;
         let tempRectangle = null;
-        let polygonPoints = []; // Points of the polygon
-        let wallColors = []; // Array to store colors of each wall segment
-        const SNAP_THRESHOLD = 100; // pixels within which snapping occurs
-        const rectangles = []; // Array to store drawn rectangles
-        const roomLabelFields = []; // Array to store room label fields
-    
-        const addWallData = (area, colors, roomLabel, id) => {
+        let polygonPoints = [];
+        let wallColors = [];
+        const SNAP_THRESHOLD = 10;
+        const rectangles = [];
+        const roomLabelFields = [];
+
+        const addWallData = (area, colors, roomLabel, roomNumber, id) => {
+            console.log("Adding/updating wall data", { area, colors, roomLabel, roomNumber, id });
             const newWallData = {
                 id,
                 area: `${area.toFixed(2)} ${selectedUnit}²`,
-                colors: colors ? [...colors] : [], // Ensure colors are stored correctly
+                colors: colors ? [...colors] : [],
                 roomLabel: roomLabel,
+                referenceNumber: roomNumber,
             };
             setWallData((prevData) => {
                 const index = prevData.findIndex((data) => data.id === id);
@@ -663,36 +669,51 @@ const DrawingTool = ({
                 }
             });
         };
-    
+
         const resetAndActivateWallTool = () => {
-            startPoint = null; // Reset start point
-            tempRectangle = null; // Clear the temporary rectangle
-            wallTool.activate(); // Reactivate wall tool for new input
+            startPoint = null;
+            tempRectangle = null;
+            wallTool.activate();
         };
-    
+
+        const getScaleFactorWall = (unit) => {
+            switch (unit) {
+                case 'in':
+                    return 0.14;
+                case 'feet':
+                    return 0.16;
+                default:
+                    return 1;
+            }
+        };
+
+        const SCALE_FACTOR_Wall = getScaleFactorWall(selectedUnit);
+
         const createRectangleFromPoints = (start, end, thickness) => {
+            const actualThickness = thickness * SCALE_FACTOR_Wall;
+
             const vector = end.subtract(start);
             const unitVector = vector.normalize();
             const perpendicularVector = new Point(
-                (-unitVector.y * thickness) / 2,
-                (unitVector.x * thickness) / 2,
+                (-unitVector.y * actualThickness) / 2,
+                (unitVector.x * actualThickness) / 2,
             );
-    
+
             const topLeft = start.add(perpendicularVector);
             const bottomLeft = start.subtract(perpendicularVector);
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
-    
+
             return new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
                 strokeColor: 'black',
-                fillColor: selectedWall.color,
-                strokeWidth: 1,
+                fillColor: selectedWall.color ? selectedWall.color : "blue",
+                strokeWidth: 0.008,
                 fullySelected: false,
             });
         };
-    
+
         const findSnapPoint = (point) => {
             for (let i = 0; i < rectangles.length; i++) {
                 const rect = rectangles[i];
@@ -703,30 +724,32 @@ const DrawingTool = ({
             }
             return point;
         };
-    
+
         const createJoinedRectangle = (start, end, thickness) => {
+            const actualThickness = thickness * SCALE_FACTOR_Wall;
+
             const vector = end.subtract(start);
             const unitVector = vector.normalize();
             const perpendicularVector = new Point(
-                (-unitVector.y * thickness) / 2,
-                (unitVector.x * thickness) / 2,
+                (-unitVector.y * actualThickness) / 2,
+                (unitVector.x * actualThickness) / 2,
             );
-    
+
             const topLeft = start.add(perpendicularVector);
             const bottomLeft = start.subtract(perpendicularVector);
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
-    
+
             return new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
                 strokeColor: 'black',
-                fillColor: selectedWall.color,
-                strokeWidth: 1,
+                fillColor: selectedWall.color ? selectedWall.color : "blue",
+                strokeWidth: 0.008,
                 fullySelected: false,
             });
         };
-    
+
         const adjustForSnap = (rectangles, point, threshold) => {
             for (let i = 0; i < rectangles.length; i++) {
                 const rect = rectangles[i];
@@ -739,21 +762,21 @@ const DrawingTool = ({
             }
             return point;
         };
-    
+
         const drawTempRectangle = (endPoint, thickness) => {
             if (rectangles.length > 0) {
                 const previousRect = rectangles[rectangles.length - 1];
-                return createJoinedRectangle(previousRect.segments[1].point, endPoint, thickness); // Use dynamic thicknessValue
+                return createJoinedRectangle(previousRect.segments[1].point, endPoint, thickness);
             } else {
-                return createRectangleFromPoints(startPoint, endPoint, thickness); // Use dynamic thicknessValue
+                return createRectangleFromPoints(startPoint, endPoint, thickness);
             }
         };
-    
+
         const calculateDistance = (start, end) => {
             const distanceInPixels = start.getDistance(end);
-            return distanceInPixels / (5.6 / SCALE_FACTOR); // Convert pixels to selected unit
+            return distanceInPixels / (5.6 / SCALE_FACTOR);
         };
-    
+
         const calculateArea = (points) => {
             let area = 0;
             for (let i = 0; i < points.length; i++) {
@@ -764,18 +787,17 @@ const DrawingTool = ({
             area = Math.abs(area) / 2;
             return area;
         };
-    
+
         const drawDimensionText = (start, end) => {
             const midpoint = new Point((start.x + end.x) / 2, (start.y + end.y) / 2);
-            const offset = 15; // Adjust this value to move the text above the wall
-            const angle = Math.atan2(end.y - start.y, end.x - start.x); // Angle of the wall segment
+            const offset = 15;
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
             const isVertical = Math.abs(angle) > Math.PI / 4 && Math.abs(angle) < (3 * Math.PI) / 4;
-    
-            // If the wall is vertical, adjust the position to the right of the midpoint
+
             const adjustedPoint = isVertical
                 ? new Point(midpoint.x + offset, midpoint.y)
-                : new Point(midpoint.x, midpoint.y - offset); // Adjust position based on the angle
-    
+                : new Point(midpoint.x, midpoint.y - offset);
+
             const distance = calculateDistance(start, end).toFixed(2);
             const unit = selectedUnit;
             const text = new PointText({
@@ -786,163 +808,262 @@ const DrawingTool = ({
             });
             textLayerRef.current.addChild(text);
         };
-    
-        const drawRoomLabel = (points, onLabelChange, id) => {
+
+        const drawRoomLabelForm = (points, id, roomNumber) => {
             const center = points.reduce((sum, point) => sum.add(point), new Point(0, 0)).divide(points.length);
-    
-            const textField = document.createElement('input');
-            textField.type = 'text';
-            textField.style.width = '70px';
-            textField.style.height = '30px';
-            textField.style.position = 'absolute';
-            textField.style.left = `${center.x}px`;
-            textField.style.top = `${center.y}px`;
-            textField.style.transform = 'translate(-50%, -50%)';
-            textField.style.zIndex = '1000';
-            textField.addEventListener('change', onLabelChange);
-    
-            document.body.appendChild(textField);
-            roomLabelFields.push({ id, textField });
-    
-            return textField;
+
+            // Create a container div for the label
+            const labelContainer = document.createElement('div');
+            labelContainer.style.width = 'auto';
+            labelContainer.style.height = 'auto';
+            labelContainer.style.position = 'absolute';
+            labelContainer.style.left = `${center.x}px`;
+            labelContainer.style.top = `${center.y}px`;
+            labelContainer.style.transform = 'translate(-50%, -50%)';
+            labelContainer.style.zIndex = '1000';
+            labelContainer.style.backgroundColor = 'white';
+            labelContainer.style.padding = '10px';
+            labelContainer.style.border = '1px solid #ccc';
+            labelContainer.style.borderRadius = '5px';
+            labelContainer.style.boxShadow = '0 0 5px rgba(0, 0, 0, 0.3)';
+            labelContainer.style.cursor = 'pointer'; // Make the container clickable
+
+            // Create the label content with the room number
+            const roomLabel = document.createElement('div');
+            roomLabel.style.cursor = 'pointer';
+            roomLabel.style.fontSize = '14px';
+            roomLabel.style.fontWeight = 'bold';
+            roomLabel.style.textAlign = 'center';
+            roomLabel.innerHTML = `FF - 0${roomNumber}<br>Room - ${roomNumber}`;
+            labelContainer.appendChild(roomLabel);
+
+            // Append the label container to the body
+            document.body.appendChild(labelContainer);
+
+            // Store the label container reference
+            roomLabelFields.push({ id, labelContainer });
+
+            // Add click event listener to the label container
+            labelContainer.addEventListener('click', () => {
+                showModal(id,labelContainer, roomNumber);
+            });
+
+            return labelContainer;
         };
-    
+
+        const showModal = (id, labelContainer, roomNumber) => {
+            // Create the modal elements
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '50%';
+            modal.style.left = '50%';
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.zIndex = '1050'; // typical z-index for modals in Material-UI
+            modal.style.backgroundColor = '#fff';
+            modal.style.padding = '24px';
+            modal.style.width = '30%'; // set a percentage width similar to Material-UI
+            modal.style.maxWidth = '500px'; // max width for responsiveness
+            modal.style.borderRadius = '4px'; // smooth corner radius
+            modal.style.boxShadow = '0px 11px 15px -7px rgba(0,0,0,0.2), 0px 24px 38px 3px rgba(0,0,0,0.14), 0px 9px 46px 8px rgba(0,0,0,0.12)'; // Material-UI shadow
+            modal.style.border = 'none';
+            modal.style.outline = '0';
+        
+            // Create the label and input elements with Material-UI-like styling
+            const createInputLabel = (text) => {
+                const label = document.createElement('label');
+                label.textContent = text;
+                label.style.display = 'block';
+                label.style.marginBottom = '8px';
+                label.style.color = 'rgba(0, 0, 0, 0.54)'; // typical label color in Material-UI
+                label.style.fontSize = '0.875rem';
+                label.style.fontWeight = '400';
+                label.style.lineHeight = '1.43';
+                label.style.letterSpacing = '0.01071em';
+                return label;
+            };
+        
+            const refLabel = createInputLabel('Reference No:');
+            const roomLabel = createInputLabel('Room Name:');
+        
+            const createInput = (defaultValue) => {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = defaultValue;
+                input.style.width = '100%';
+                input.style.padding = '10px';
+                input.style.marginBottom = '16px';
+                input.style.borderRadius = '4px';
+                input.style.border = '1px solid rgba(0, 0, 0, 0.23)';
+                input.style.fontSize = '0.875rem';
+                input.style.outline = 'none';
+                input.style.boxSizing = 'border-box'; // ensure padding doesn't affect width
+                input.addEventListener('focus', () => {
+                    input.style.border = '2px solid #3f51b5'; // Material-UI primary color focus
+                });
+                input.addEventListener('blur', () => {
+                    input.style.border = '1px solid rgba(0, 0, 0, 0.23)';
+                });
+                return input;
+            };
+        
+            const refInput = createInput(`FF - 0${roomNumber}`);
+            const labelInput = createInput(`Room - ${roomNumber}`);
+        
+            // Create buttons with Material-UI-like styling
+            const createButton = (text) => {
+                const button = document.createElement('button');
+                button.innerText = text;
+                button.style.width = '100%';
+                button.style.padding = '10px';
+                button.style.marginTop = '8px';
+                button.style.border = 'none';
+                button.style.color = '#fff';
+                button.style.backgroundColor = '#3f51b5'; // Material-UI primary color
+                button.style.cursor = 'pointer';
+                button.style.fontSize = '0.875rem';
+                button.style.fontWeight = '500';
+                button.style.letterSpacing = '0.02857em';
+                button.style.textTransform = 'uppercase';
+                button.style.borderRadius = '4px';
+                button.addEventListener('mouseenter', () => {
+                    button.style.backgroundColor = '#303f9f'; // darken on hover
+                });
+                button.addEventListener('mouseleave', () => {
+                    button.style.backgroundColor = '#3f51b5';
+                });
+                return button;
+            };
+        
+            const saveButton = createButton('Update');
+            saveButton.addEventListener('click', () => {
+                labelContainer.innerHTML = `${refInput.value}<br>${labelInput.value}`;
+                updateWallData(id, labelInput.value, refInput.value.split('-')[1].trim());
+                document.body.removeChild(modal);
+            });
+        
+            const closeButton = createButton('Close');
+            closeButton.style.backgroundColor = '#f44336'; // red color for close
+            closeButton.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        
+            // Append all elements to the modal
+            modal.appendChild(refLabel);
+            modal.appendChild(refInput);
+            modal.appendChild(roomLabel);
+            modal.appendChild(labelInput);
+            modal.appendChild(saveButton);
+            modal.appendChild(closeButton);
+        
+            // Append the modal to the body
+            document.body.appendChild(modal);
+        };
+
+        const updateWallData = (id, newRoomLabel, newRoomNumber) => {
+            setWallData((prevData) => {
+                return prevData.map(data => {
+                    if (data.id === id) {
+                        return {
+                            ...data,
+                            roomLabel: newRoomLabel,
+                            referenceNumber: `FF - ${newRoomNumber}`
+                        };
+                    }
+                    return data;
+                });
+            });
+        };
+
         const removeRoomLabel = (labelField) => {
             if (labelField) {
                 document.body.removeChild(labelField.textField);
             }
         };
-    
-        const createNewRoomLabels = (polygonPoints1, polygonPoints2, id1, id2) => {
-            const onLabelChange1 = (event) => {
-                const roomLabel = event.target.value;
-                addWallData(calculateArea(polygonPoints1), wallColors, roomLabel, id1);
-            };
-    
-            const onLabelChange2 = (event) => {
-                const roomLabel = event.target.value;
-                addWallData(calculateArea(polygonPoints2), wallColors, roomLabel, id2);
-            };
-    
-            const label1 = drawRoomLabel(polygonPoints1, onLabelChange1, id1);
-            const label2 = drawRoomLabel(polygonPoints2, onLabelChange2, id2);
-    
-            roomLabelFields.push(label1, label2);
-        };
-    
-        const splitPolygon = (polygon, dividingLine) => {
-            const polygonPoints1 = [];
-            const polygonPoints2 = [];
-    
-            let addToFirst = true;
-    
-            for (let i = 0; i < polygon.length; i++) {
-                if (polygon[i].equals(dividingLine[0]) || polygon[i].equals(dividingLine[1])) {
-                    addToFirst = !addToFirst;
-                    polygonPoints1.push(polygon[i]);
-                    polygonPoints2.push(polygon[i]);
-                    if (polygon[i].equals(dividingLine[0])) {
-                        polygonPoints1.push(dividingLine[1]);
-                    } else {
-                        polygonPoints2.push(dividingLine[0]);
-                    }
-                } else {
-                    if (addToFirst) {
-                        polygonPoints1.push(polygon[i]);
-                    } else {
-                        polygonPoints2.push(polygon[i]);
-                    }
-                }
-            }
-    
-            return [polygonPoints1, polygonPoints2];
-        };
-    
+
         wallTool.onMouseDown = (event) => {
             if (!startPoint) {
-                // First click sets the start point for a new wall
                 startPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
                 polygonPoints.push(startPoint);
-                wallColors.push(selectedWall.color); // Store the color of the first segment
+                wallColors.push(selectedWall.color);
             } else {
-                // Create a new rectangle from startPoint to the current point
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
-                const wallRectangle = drawTempRectangle(endPoint, selectedWall.thickness); // Use dynamic thicknessValue
-    
-                rectangles.push(wallRectangle); // Store the rectangle
-                shapesLayerRef.current.addChild(wallRectangle); // Add to shapes layer
-                drawDimensionText(startPoint, endPoint); // Draw dimension text
-                startPoint = endPoint; // Reset start point to the end of the current wall
-    
+                let wallRectangle;
+                if (selectedWall.thickness) {
+                    wallRectangle = drawTempRectangle(endPoint, selectedWall.thickness);
+                } else {
+                    wallRectangle = drawTempRectangle(endPoint, 10);
+                }
+        
+                rectangles.push(wallRectangle);
+                shapesLayerRef.current.addChild(wallRectangle);
+                drawDimensionText(startPoint, endPoint);
+                startPoint = endPoint;
+        
                 polygonPoints.push(endPoint);
-                wallColors.push(selectedWall.color); // Store the color of the current segment
-    
+                wallColors.push(selectedWall.color);
+        
                 if (polygonPoints.length > 2 && endPoint.getDistance(polygonPoints[0]) <= SNAP_THRESHOLD) {
-                    // Close the polygon
                     const area = calculateArea(polygonPoints);
-    
-                    const id = Math.random().toString(36).substr(2, 9); // Generate a unique ID for the polygon
-                    const onLabelChange = (event) => {
-                        const roomLabel = event.target.value;
-                        addWallData(area, wallColors, roomLabel, id);
-                        // Do not reset wallColors here
-                    };
-    
-                    drawRoomLabel(polygonPoints, onLabelChange, id); // Draw room label text field inside the closed polygon
-    
-                    polygonPoints = []; // Reset points for the next polygon
+                    const id = Math.random().toString(36).substr(2, 9);
+                    const currentRoomNumber = roomNumber;
+        
+                    // Adding wall data directly when closing the polygon
+                    addWallData(area, wallColors, "Room - " + currentRoomNumber, currentRoomNumber, id);
+        
+                    drawRoomLabelForm(polygonPoints, id, currentRoomNumber); // Simplified call
+                    setRoomNumber((prevNumber) => prevNumber + 1); // Increment room number
+        
+                    polygonPoints = [];
                     resetAndActivateWallTool();
                 }
             }
         };
-    
+
         wallTool.onMouseMove = (event) => {
             if (startPoint) {
                 if (tempRectangle) {
                     tempRectangle.remove();
                 }
-    
-                // Draw a temporary rectangle as the mouse moves
+
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
-                tempRectangle = drawTempRectangle(endPoint, selectedWall.thickness); // Use dynamic thicknessValue
-    
-                tempRectangle.strokeColor = selectedWall.color;
-                tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)'; // Semi-transparent fill
-    
-                // Change color if snapping to start point
+                if (selectedWall.thickness) {
+                    tempRectangle = drawTempRectangle(endPoint, selectedWall.thickness);
+                } else {
+                    tempRectangle = drawTempRectangle(endPoint, 10);
+                }
+
+                tempRectangle.strokeColor = selectedWall.color ? selectedWall.color : "blue";
+                tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)';
+
                 if (startPoint.getDistance(endPoint) <= SNAP_THRESHOLD) {
                     tempRectangle.strokeColor = 'red';
                 }
-                shapesLayerRef.current.addChild(tempRectangle); // Add temp rectangle to shapes layer
+                shapesLayerRef.current.addChild(tempRectangle);
             }
         };
-    
+
         wallTool.onMouseUp = (event) => {
             if (tempRectangle) {
                 tempRectangle.remove();
                 tempRectangle = null;
             }
         };
-    
+
         wallTool.onKeyDown = (event) => {
             if (event.key === 'escape') {
-                // When 'Esc' is pressed, reset the tool and start a new figure
                 rectangles.length = 0;
                 polygonPoints.length = 0;
                 resetAndActivateWallTool();
             }
         };
-    
+
         if (drawWalls) {
             wallTool.activate();
         } else {
-            console.log('test'); // Default tool for other functionalities
+            console.log('test');
         }
-    }, [selectedWall, drawWalls, selectedUnit, gridColor, thicknessValue]);
+    }, [selectedWall, drawWalls, selectedUnit, gridColor, thicknessValue, roomNumber, setWallData]);
     
-    
-
-
     const handleRoomScheduleClick = () => {
         setScheduleModalOpen(true);
     };
@@ -972,7 +1093,6 @@ const DrawingTool = ({
         } else {
             setSelectedWall({});
         }
-
     };
 
     return (
@@ -987,7 +1107,6 @@ const DrawingTool = ({
             <>
                 {moveInstruction && <div className="instruction-text">{moveInstruction}</div>}
             </>
-            {/* <button onClick={handleSaveCanvas}>Save Canvas</button> */}
             <div style={{ position: 'absolute', top: '2%', left: '12%', zIndex: 999 }}>
                 <Select
                     value={selectedValue}
@@ -1014,7 +1133,7 @@ const DrawingTool = ({
                     aria-labelledby="modal-title"
                     aria-describedby="modal-description"
                     PaperProps={{
-                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
+                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 },
                     }}
                 >
                     <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Select Wall Thickness</DialogTitle>
@@ -1053,7 +1172,7 @@ const DrawingTool = ({
                     aria-labelledby="modal-title"
                     aria-describedby="modal-description"
                     PaperProps={{
-                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 }, // Higher z-index for the modal
+                        style: { width: '400px', maxWidth: 'none', zIndex: 9999 },
                     }}
                 >
                     <DialogTitle id="modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Select Wall Color</DialogTitle>
@@ -1097,7 +1216,7 @@ const DrawingTool = ({
                 aria-labelledby="schedule-modal-title"
                 aria-describedby="schedule-modal-description"
                 PaperProps={{
-                    style: { width: '80%', maxWidth: 'none', zIndex: 9999 }, // Adjust the width as needed
+                    style: { width: '80%', maxWidth: 'none', zIndex: 9999 },
                 }}
             >
                 <DialogTitle id="schedule-modal-title" style={{ fontWeight: "bold", display: 'flex', justifyContent: 'center' }}>Room Schedule</DialogTitle>
@@ -1114,14 +1233,16 @@ const DrawingTool = ({
                         <tbody>
                             {wallData.map((wall, index) => (
                                 <tr key={index}>
-                                    <td style={{ border: '1px solid black', padding: '8px' }}>{index + 1}</td>
+                                    <td style={{ border: '1px solid black', padding: '8px' }}>{wall.referenceNumber}</td>
                                     <td style={{ border: '1px solid black', padding: '8px' }}>{wall.roomLabel}</td>
                                     <td style={{ border: '1px solid black', padding: '8px' }}>{wall.area}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px' }}>
-                                        {wall.colors.map((color, i) => (
-                                            <div key={i} style={{ width: '20px', height: '20px', backgroundColor: color, display: 'inline-block', margin: '2px' }}></div>
-                                        ))}
-                                    </td>
+                                    {wall.colors && (
+                                        <td style={{ border: '1px solid black', padding: '8px' }}>
+                                            {wall.colors.map((color, i) => (
+                                                <div key={i} style={{ width: '20px', height: '20px', backgroundColor: color ? color : "blue", display: 'inline-block', margin: '2px' }}></div>
+                                            ))}
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
