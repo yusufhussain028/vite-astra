@@ -239,7 +239,7 @@ export default function ResponsiveDrawer() {
     };
 
     const handleGoBack = () => {
-        navigate('/');
+        navigate('/vite-astra');
     }
 
     const handleDraw = () => {
