@@ -106,7 +106,7 @@ export default function ResponsiveDrawer() {
     const [settingsOpen, setSettingsOpen] = React.useState(false);
     const [transparency, setTransparency] = React.useState(70);
     const [gridTransparency, setGridTransparency] = React.useState(20);
-    const [selectedUnits, setSelectedUnits] = React.useState('meter');
+    const [selectedUnits, setSelectedUnits] = React.useState('');
     const [wallUnit, setWallUnit] = React.useState();
     const [unitsModalOpenCount, setUnitsModalOpenCount] = React.useState(0);
     const [unitsModalAgain, setUnitsModalAgain] = React.useState(false);
@@ -169,8 +169,7 @@ export default function ResponsiveDrawer() {
     };
 
     const handleModalClose = () => {
-        debugger;
-        if(selectedUnits == 'meter'){
+        if(selectedUnits == ''){
             setUnitSnackbarOpen(true);
         }
         else{
@@ -232,7 +231,7 @@ export default function ResponsiveDrawer() {
     const handleUnitsSelection = (units) => {
         if (units === 'in' || units === 'feet') {
             setWallUnit('in'); // Default to inches if an Imperial unit is selected
-        } else if (units === 'cm' || units === 'mm') {
+        } else if (units === 'cm' || units === 'mm' || units === 'meter') {
             setWallUnit('mm'); // Default to millimeters if a Metric unit is selected
         }
         setSelectedUnits(units);
@@ -533,9 +532,9 @@ export default function ResponsiveDrawer() {
                                 <div>
                                     <div style={{ paddingTop: "8px", paddingBottom: "8px", display: 'flex', justifyContent: 'center' }}>Imperial</div>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('in')} style={{ backgroundColor: selectedUnits === 'in' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'in' ? "#fff" : "#000", marginBottom: "8px" }}>
+                                        {/* <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('in')} style={{ backgroundColor: selectedUnits === 'in' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'in' ? "#fff" : "#000", marginBottom: "8px" }}>
                                             in
-                                        </Button>
+                                        </Button> */}
                                         <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('feet')} style={{ backgroundColor: selectedUnits === 'feet' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'feet' ? "#fff" : "#000", marginBottom: "8px" }}>
                                             feet
                                         </Button>
@@ -544,11 +543,14 @@ export default function ResponsiveDrawer() {
                                 <div>
                                     <div style={{ paddingTop: "8px", paddingBottom: "8px", display: 'flex', justifyContent: 'center' }}>Metric</div>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('cm')} style={{ backgroundColor: selectedUnits === 'cm' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'cm' ? "#fff" : "#000", marginBottom: "8px" }}>
+                                        {/* <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('cm')} style={{ backgroundColor: selectedUnits === 'cm' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'cm' ? "#fff" : "#000", marginBottom: "8px" }}>
                                             cm
                                         </Button>
                                         <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('mm')} style={{ backgroundColor: selectedUnits === 'mm' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'mm' ? "#fff" : "#000" }}>
                                             mm
+                                        </Button> */}
+                                        <Button disabled={unitsDisabled} variant="contained" color="primary" onClick={() => handleUnitsSelection('meter')} style={{ backgroundColor: selectedUnits === 'meter' ? "#666CFF" : "#fff", textTransform: 'lowercase', borderRadius: "5px solid grey", color: selectedUnits === 'meter' ? "#fff" : "#000" }}>
+                                            meter
                                         </Button>
                                     </div>
                                 </div>
@@ -647,7 +649,7 @@ export default function ResponsiveDrawer() {
                                             />
                                             <FormControl variant="outlined" style={{ marginLeft: '8px', width: '33%', marginTop: '10px' }}>
                                                 <InputLabel>Unit</InputLabel>
-                                                {selectedUnits != '' && selectedUnits != 'meter' ? (
+                                                {selectedUnits != '' ? (
                                                     <Select
                                                         value={gridUnit}
                                                         onChange={handleGridScaleUnitChange}
@@ -917,7 +919,7 @@ export default function ResponsiveDrawer() {
                         style={{ whiteSpace: 'pre-line' }}
                         message={
                             <span style={{ display: 'block', maxWidth: '300px', wordWrap: 'break-word' }}>
-                                Select atleast one unit to proceed further.
+                                Select at least one unit to proceed further.
                             </span>
                         }
                     />

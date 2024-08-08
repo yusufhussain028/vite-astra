@@ -650,7 +650,6 @@ const DrawingTool = ({
         const roomLabelFields = [];
 
         const addWallData = (area, colors, roomLabel, roomNumber, id) => {
-            console.log("Adding/updating wall data", { area, colors, roomLabel, roomNumber, id });
             const newWallData = {
                 id,
                 area: `${area.toFixed(2)} ${selectedUnit}²`,
@@ -682,6 +681,8 @@ const DrawingTool = ({
                     return 0.14;
                 case 'feet':
                     return 0.16;
+                case 'meter':
+                    return 0.0055;
                 default:
                     return 1;
             }
@@ -704,25 +705,18 @@ const DrawingTool = ({
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
 
-            return new Path({
+            const rectangle = new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
                 strokeColor: 'black',
                 fillColor: selectedWall.color ? selectedWall.color : "blue",
-                strokeWidth: 0.008,
+                strokeWidth: 0.05,
                 fullySelected: false,
             });
-        };
 
-        const findSnapPoint = (point) => {
-            for (let i = 0; i < rectangles.length; i++) {
-                const rect = rectangles[i];
-                const endPoint = rect.segments[1].point;
-                if (point.getDistance(endPoint) <= SNAP_THRESHOLD) {
-                    return endPoint;
-                }
-            }
-            return point;
+            const dashedLine = drawDashedLine(start, end);
+
+            return { rectangle, dashedLine };
         };
 
         const createJoinedRectangle = (start, end, thickness) => {
@@ -740,19 +734,45 @@ const DrawingTool = ({
             const topRight = end.add(perpendicularVector);
             const bottomRight = end.subtract(perpendicularVector);
 
-            return new Path({
+            const rectangle = new Path({
                 segments: [topLeft, topRight, bottomRight, bottomLeft],
                 closed: true,
                 strokeColor: 'black',
                 fillColor: selectedWall.color ? selectedWall.color : "blue",
-                strokeWidth: 0.008,
+                strokeWidth: 0.05,
                 fullySelected: false,
             });
+
+            const dashedLine = drawDashedLine(start, end);
+
+            return { rectangle, dashedLine };
+        };
+
+        const drawDashedLine = (start, end) => {
+            const dashedLine = new Path.Line({
+                from: start,
+                to: end,
+                strokeColor: 'black',
+                dashArray: [1, 1],
+                strokeWidth: 0.04
+            });
+            return dashedLine;
+        };
+
+        const findSnapPoint = (point) => {
+            for (let i = 0; i < rectangles.length; i++) {
+                const rect = rectangles[i].rectangle;
+                const endPoint = rect.segments[1].point;
+                if (point.getDistance(endPoint) <= SNAP_THRESHOLD) {
+                    return endPoint;
+                }
+            }
+            return point;
         };
 
         const adjustForSnap = (rectangles, point, threshold) => {
             for (let i = 0; i < rectangles.length; i++) {
-                const rect = rectangles[i];
+                const rect = rectangles[i].rectangle;
                 for (let j = 0; j < rect.segments.length; j++) {
                     const segmentPoint = rect.segments[j].point;
                     if (point.getDistance(segmentPoint) <= threshold) {
@@ -764,12 +784,14 @@ const DrawingTool = ({
         };
 
         const drawTempRectangle = (endPoint, thickness) => {
+            let result;
             if (rectangles.length > 0) {
-                const previousRect = rectangles[rectangles.length - 1];
-                return createJoinedRectangle(previousRect.segments[1].point, endPoint, thickness);
+                const previousRect = rectangles[rectangles.length - 1].rectangle;
+                result = createJoinedRectangle(previousRect.segments[1].point, endPoint, thickness);
             } else {
-                return createRectangleFromPoints(startPoint, endPoint, thickness);
+                result = createRectangleFromPoints(startPoint, endPoint, thickness);
             }
+            return result;
         };
 
         const calculateDistance = (start, end) => {
@@ -845,7 +867,7 @@ const DrawingTool = ({
 
             // Add click event listener to the label container
             labelContainer.addEventListener('click', () => {
-                showModal(id,labelContainer, roomNumber);
+                showModal(id, labelContainer, roomNumber);
             });
 
             return labelContainer;
@@ -867,7 +889,7 @@ const DrawingTool = ({
             modal.style.boxShadow = '0px 11px 15px -7px rgba(0,0,0,0.2), 0px 24px 38px 3px rgba(0,0,0,0.14), 0px 9px 46px 8px rgba(0,0,0,0.12)'; // Material-UI shadow
             modal.style.border = 'none';
             modal.style.outline = '0';
-        
+
             // Create the label and input elements with Material-UI-like styling
             const createInputLabel = (text) => {
                 const label = document.createElement('label');
@@ -881,10 +903,10 @@ const DrawingTool = ({
                 label.style.letterSpacing = '0.01071em';
                 return label;
             };
-        
+
             const refLabel = createInputLabel('Reference No:');
             const roomLabel = createInputLabel('Room Name:');
-        
+
             const createInput = (defaultValue) => {
                 const input = document.createElement('input');
                 input.type = 'text';
@@ -905,10 +927,10 @@ const DrawingTool = ({
                 });
                 return input;
             };
-        
+
             const refInput = createInput(`FF - 0${roomNumber}`);
             const labelInput = createInput(`Room - ${roomNumber}`);
-        
+
             // Create buttons with Material-UI-like styling
             const createButton = (text) => {
                 const button = document.createElement('button');
@@ -933,20 +955,20 @@ const DrawingTool = ({
                 });
                 return button;
             };
-        
+
             const saveButton = createButton('Update');
             saveButton.addEventListener('click', () => {
                 labelContainer.innerHTML = `${refInput.value}<br>${labelInput.value}`;
                 updateWallData(id, labelInput.value, refInput.value.split('-')[1].trim());
                 document.body.removeChild(modal);
             });
-        
+
             const closeButton = createButton('Close');
             closeButton.style.backgroundColor = '#f44336'; // red color for close
             closeButton.addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
-        
+
             // Append all elements to the modal
             modal.appendChild(refLabel);
             modal.appendChild(refInput);
@@ -954,7 +976,7 @@ const DrawingTool = ({
             modal.appendChild(labelInput);
             modal.appendChild(saveButton);
             modal.appendChild(closeButton);
-        
+
             // Append the modal to the body
             document.body.appendChild(modal);
         };
@@ -980,6 +1002,51 @@ const DrawingTool = ({
             }
         };
 
+        const drawDiagonalLine = (prevEnd, currStart, thickness) => {
+            const actualThickness = thickness * SCALE_FACTOR_Wall;
+
+            // Calculate perpendicular vector for offset
+            const directionVector = currStart.subtract(prevEnd).normalize();
+            const perpendicularVector = new Point(
+                (-directionVector.y * actualThickness) / 2,
+                (directionVector.x * actualThickness) / 2
+            );
+
+            const startCorner = prevEnd.add(perpendicularVector);
+            const endCorner = currStart.subtract(perpendicularVector);
+
+            const diagonalLine = new Path.Line({
+                from: startCorner,
+                to: endCorner,
+                strokeColor: 'red',
+                strokeWidth: 0.05,
+            });
+
+            shapesLayerRef.current.addChild(diagonalLine);
+        };
+
+        const getIntersectionPoint = (line1Start, line1End, line2Start, line2End) => {
+            const denominator = ((line2End.y - line2Start.y) * (line1End.x - line1Start.x)) - ((line2End.x - line2Start.x) * (line1End.y - line1Start.y));
+
+            if (denominator === 0) return null; // Lines are parallel
+
+            const a = line1Start.y - line2Start.y;
+            const b = line1Start.x - line2Start.x;
+            const numerator1 = ((line2End.x - line2Start.x) * a) - ((line2End.y - line2Start.y) * b);
+            const numerator2 = ((line1End.x - line1Start.x) * a) - ((line1End.y - line1Start.y) * b);
+            const ratio1 = numerator1 / denominator;
+            const ratio2 = numerator2 / denominator;
+
+            if (ratio1 >= 0 && ratio1 <= 1 && ratio2 >= 0 && ratio2 <= 1) {
+                return new Point(
+                    line1Start.x + (ratio1 * (line1End.x - line1Start.x)),
+                    line1Start.y + (ratio1 * (line1End.y - line1Start.y))
+                );
+            }
+
+            return null;
+        };
+
         wallTool.onMouseDown = (event) => {
             if (!startPoint) {
                 startPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
@@ -987,32 +1054,87 @@ const DrawingTool = ({
                 wallColors.push(selectedWall.color);
             } else {
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
-                let wallRectangle;
+                let result;
                 if (selectedWall.thickness) {
-                    wallRectangle = drawTempRectangle(endPoint, selectedWall.thickness);
+                    result = drawTempRectangle(endPoint, selectedWall.thickness);
                 } else {
-                    wallRectangle = drawTempRectangle(endPoint, 10);
+                    result = drawTempRectangle(endPoint, 10);
                 }
-        
-                rectangles.push(wallRectangle);
-                shapesLayerRef.current.addChild(wallRectangle);
+
+                rectangles.push(result);
+                shapesLayerRef.current.addChild(result.rectangle);
+                shapesLayerRef.current.addChild(result.dashedLine);
                 drawDimensionText(startPoint, endPoint);
+
+                if (rectangles.length > 1) {
+                    const prevRect = rectangles[rectangles.length - 2].rectangle;
+                    const prevEnd = prevRect.segments[1].point;
+
+                    const intersectionPoint = getIntersectionPoint(
+                        prevRect.segments[0].point,
+                        prevRect.segments[1].point,
+                        startPoint,
+                        endPoint
+                    );
+
+                    if (intersectionPoint) {
+                        drawDiagonalLine(prevEnd, intersectionPoint, selectedWall.thickness || 10);
+                    } else {
+                        drawDiagonalLine(prevEnd, prevRect.segments[2].point, selectedWall.thickness || 10);
+                    }
+                }
+
                 startPoint = endPoint;
-        
+
                 polygonPoints.push(endPoint);
                 wallColors.push(selectedWall.color);
-        
+
                 if (polygonPoints.length > 2 && endPoint.getDistance(polygonPoints[0]) <= SNAP_THRESHOLD) {
                     const area = calculateArea(polygonPoints);
                     const id = Math.random().toString(36).substr(2, 9);
                     const currentRoomNumber = roomNumber;
-        
+
                     // Adding wall data directly when closing the polygon
                     addWallData(area, wallColors, "Room - " + currentRoomNumber, currentRoomNumber, id);
-        
+
                     drawRoomLabelForm(polygonPoints, id, currentRoomNumber); // Simplified call
                     setRoomNumber((prevNumber) => prevNumber + 1); // Increment room number
-        
+
+                    // Draw the diagonal line for the last joint
+                    const firstRect = rectangles[0].rectangle;
+                    const firstPoint = firstRect.segments[0].point;
+                    const lastRect = rectangles[rectangles.length - 1].rectangle;
+                    const lastPoint = lastRect.segments[1].point;
+                    const finalIntersectionPoint = getIntersectionPoint(
+                        firstRect.segments[0].point,
+                        firstRect.segments[1].point,
+                        lastRect.segments[2].point,
+                        lastRect.segments[3].point
+                    );
+
+
+                    // if (finalIntersectionPoint) {
+                    //     drawDiagonalLine(endPoint, finalIntersectionPoint, selectedWall.thickness || 10);
+                    // } else {
+                    //     drawDiagonalLine(endPoint, polygonPoints[0], selectedWall.thickness || 10);
+                    // }
+
+                    if (finalIntersectionPoint) {
+                        drawDiagonalLine(lastPoint, finalIntersectionPoint, selectedWall.thickness || 10);
+                    } else {
+                        const intersectionWithFirst = getIntersectionPoint(
+                            firstPoint,
+                            firstRect.segments[1].point,
+                            lastRect.segments[2].point,
+                            lastRect.segments[3].point
+                        );
+                        if (intersectionWithFirst) {
+                            drawDiagonalLine(lastPoint, intersectionWithFirst, selectedWall.thickness || 10);
+                        } else {
+                            drawDiagonalLine(lastPoint, firstPoint, selectedWall.thickness || 10);
+                        }
+                    }
+
                     polygonPoints = [];
                     resetAndActivateWallTool();
                 }
@@ -1022,7 +1144,8 @@ const DrawingTool = ({
         wallTool.onMouseMove = (event) => {
             if (startPoint) {
                 if (tempRectangle) {
-                    tempRectangle.remove();
+                    tempRectangle.rectangle.remove();
+                    tempRectangle.dashedLine.remove();
                 }
 
                 const endPoint = adjustForSnap(rectangles, event.point, SNAP_THRESHOLD);
@@ -1032,19 +1155,22 @@ const DrawingTool = ({
                     tempRectangle = drawTempRectangle(endPoint, 10);
                 }
 
-                tempRectangle.strokeColor = selectedWall.color ? selectedWall.color : "blue";
-                tempRectangle.fillColor = 'rgba(128, 128, 128, 0.5)';
+                tempRectangle.rectangle.strokeColor = selectedWall.color ? selectedWall.color : "blue";
+                tempRectangle.rectangle.fillColor = 'rgba(128, 128, 128, 0.5)';
 
                 if (startPoint.getDistance(endPoint) <= SNAP_THRESHOLD) {
-                    tempRectangle.strokeColor = 'red';
+                    tempRectangle.rectangle.strokeColor = 'red';
                 }
-                shapesLayerRef.current.addChild(tempRectangle);
+
+                shapesLayerRef.current.addChild(tempRectangle.rectangle);
+                shapesLayerRef.current.addChild(tempRectangle.dashedLine);
             }
         };
 
         wallTool.onMouseUp = (event) => {
             if (tempRectangle) {
-                tempRectangle.remove();
+                tempRectangle.rectangle.remove();
+                tempRectangle.dashedLine.remove();
                 tempRectangle = null;
             }
         };
@@ -1063,7 +1189,7 @@ const DrawingTool = ({
             console.log('test');
         }
     }, [selectedWall, drawWalls, selectedUnit, gridColor, thicknessValue, roomNumber, setWallData]);
-    
+
     const handleRoomScheduleClick = () => {
         setScheduleModalOpen(true);
     };
