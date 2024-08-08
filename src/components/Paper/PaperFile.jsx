@@ -1233,7 +1233,7 @@ const DrawingTool = ({
             <>
                 {moveInstruction && <div className="instruction-text">{moveInstruction}</div>}
             </>
-            <div style={{ position: 'absolute', top: '2%', left: '12%', zIndex: 999 }}>
+            <div style={{ position: 'absolute', top: '-25%', left: '12%', zIndex: 999 }}>
                 <Select
                     value={selectedValue}
                     onChange={handleDropdownChange}
