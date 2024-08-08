@@ -1233,7 +1233,7 @@ const DrawingTool = ({
             <>
                 {moveInstruction && <div className="instruction-text">{moveInstruction}</div>}
             </>
-            <div style={{ position: 'absolute', top: '-25%', left: '12%', zIndex: 999 }}>
+            <div style={{ position: 'absolute', top: '15%', left: '12%', zIndex: 999 }}>
                 <Select
                     value={selectedValue}
                     onChange={handleDropdownChange}
@@ -1249,7 +1249,7 @@ const DrawingTool = ({
                     ))}
                 </Select>
             </div>
-            <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "2%", left: "98%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "15%", left: "98%", zIndex: "999" }}>
                 <img src={ThicknessIcon} height='20' width='20' />
             </IconButton>
             {lineThicknessModal && (
