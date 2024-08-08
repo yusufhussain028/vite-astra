@@ -1288,7 +1288,7 @@ const DrawingTool = ({
                     </DialogActions>
                 </Dialog>
             )}
-            <IconButton color="primary" onClick={handleWallColor} style={{ position: "absolute", top: "2%", left: "94%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleWallColor} style={{ position: "absolute", top: "-25%", left: "94%", zIndex: "999" }}>
                 <img src={ColorPickerIcon} height='20' width='20' />
             </IconButton>
             {colorModal && (
@@ -1333,7 +1333,7 @@ const DrawingTool = ({
                     </DialogActions>
                 </Dialog>
             )}
-            <IconButton color="primary" onClick={handleRoomScheduleClick} style={{ position: "absolute", top: "2%", left: "90%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleRoomScheduleClick} style={{ position: "absolute", top: "-25%", left: "90%", zIndex: "999" }}>
                 <img src={wallDataIcon} height='20' width='20' />
             </IconButton>
             <Dialog
