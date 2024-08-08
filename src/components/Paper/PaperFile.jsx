@@ -48,7 +48,6 @@ const DrawingTool = ({
     const [selectedWall, setSelectedWall] = useState([]);
     const [roomNumber, setRoomNumber] = useState(1); // Initial room number
 
-
     let isDragging = false;
     let dragStart = null;
     let isRightMouseDown = false;
@@ -501,40 +500,11 @@ const DrawingTool = ({
         };
 
         const updateCanvasSizeText = () => {
-            const textLayer = textLayerRef.current;
-            textLayer.removeChildren();
-
             const widthInUnits = (CANVAS_WIDTH_IN_METERS * SCALE_FACTOR).toFixed(2);
             const heightInUnits = (CANVAS_HEIGHT_IN_METERS * SCALE_FACTOR).toFixed(2);
 
-            const widthText = new PointText({
-                point: new Point(10, 50),
-                content: `Width: ${widthInUnits} ${selectedUnit}`,
-                fillColor: 'black',
-                fontSize: 12,
-            });
-
-            const heightText = new PointText({
-                point: new Point(10, 70),
-                content: `Height: ${heightInUnits} ${selectedUnit}`,
-                fillColor: 'black',
-                fontSize: 12,
-            });
-
-            textLayer.addChild(widthText);
-            textLayer.addChild(heightText);
-
-            setWidthText(widthText);
-            setHeightText(heightText);
-        };
-
-        const positionCanvasSizeText = () => {
-            if (widthText) {
-                widthText.point = paper.view.bounds.topLeft.add(new Point(10, 50));
-            }
-            if (heightText) {
-                heightText.point = paper.view.bounds.topLeft.add(new Point(10, 70));
-            }
+            setWidthText(`Width: ${widthInUnits} ${selectedUnit}`);
+            setHeightText(`Height: ${heightInUnits} ${selectedUnit}`);
         };
 
         const textLayer = new Layer();
@@ -552,8 +522,6 @@ const DrawingTool = ({
         updateCanvasSizeText();
         drawGrid();
 
-        paper.view.on('frame', positionCanvasSizeText); // Update text position on each frame
-
         const handleScroll = (event) => {
             event.preventDefault();
             const delta = event.deltaY > 0 ? 0.9 : 1.1;
@@ -566,9 +534,18 @@ const DrawingTool = ({
             gridLayer.bringToFront(); // Ensure grid layer is always on top after zooming
         };
 
-        window.addEventListener('wheel', handleScroll, { passive: false });
+        const handleResize = () => {
+            const canvas = canvasRef.current;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            paper.view.viewSize = new paper.Size(window.innerWidth, window.innerHeight);
+            drawGrid(); // Redraw the grid on resize
+        };
 
-        updateCanvasSizeText();
+        window.addEventListener('wheel', handleScroll, { passive: false });
+        window.addEventListener('resize', handleResize);
+
+        handleResize(); // Set initial canvas size
 
         // Prevent the default context menu from appearing on right-click
         const preventContextMenu = (event) => {
@@ -582,6 +559,7 @@ const DrawingTool = ({
                 paper.remove();
             }
             window.removeEventListener('wheel', handleScroll);
+            window.removeEventListener('resize', handleResize);
             window.removeEventListener('contextmenu', preventContextMenu);
         };
     }, [checkImg, transparency, gridTransparency, uploadImage, newScale, imagePosition, toolEnabled, lockedImage, rasterPosition, selectedUnit, drawWalls, gridLineColor, gridScaleVal]); // Remove thicknessValue from dependencies
@@ -1026,7 +1004,7 @@ const DrawingTool = ({
         };
 
         const getIntersectionPoint = (line1Start, line1End, line2Start, line2End) => {
-            const denominator = ((line2End.y - line2Start.y) * (line1End.x - line1Start.x)) - ((line2End.x - line2Start.x) * (line1End.y - line1Start.y));
+            const denominator = ((line2End.y - line2Start.y) * (line1End.x - line1Start.x)) - ((line2End.x - line2Start.x) * (line1End.y - line1Start.x));
 
             if (denominator === 0) return null; // Lines are parallel
 
@@ -1225,15 +1203,17 @@ const DrawingTool = ({
         <div className="mainClass">
             <canvas
                 ref={canvasRef}
-                width={2280} // Set to 2280 pixels to represent 228 meters
-                height={1000} // Set to 1000 pixels to represent 100 meters
-                style={{ ...canvasStyle }}
+                style={{ ...canvasStyle, width: '100vw', height: '100vh' }}
             />
             {!measurementComplete && instructionText && <div className="instruction-text">{instructionText}</div>}
             <>
                 {moveInstruction && <div className="instruction-text">{moveInstruction}</div>}
             </>
-            <div style={{ position: 'absolute', top: '15%', left: '12%', zIndex: 999 }}>
+            <div className="canvas-size-text">
+                <div>{widthText}</div>
+                <div>{heightText}</div>
+            </div>
+            <div style={{ position: 'absolute', top: '16.5%', left: '12%', zIndex: 999 }}>
                 <Select
                     value={selectedValue}
                     onChange={handleDropdownChange}
@@ -1249,7 +1229,7 @@ const DrawingTool = ({
                     ))}
                 </Select>
             </div>
-            <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "15%", left: "98%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleWallThickness} style={{ position: "absolute", top: "16.5%", left: "98%", zIndex: "999" }}>
                 <img src={ThicknessIcon} height='20' width='20' />
             </IconButton>
             {lineThicknessModal && (
@@ -1288,7 +1268,7 @@ const DrawingTool = ({
                     </DialogActions>
                 </Dialog>
             )}
-            <IconButton color="primary" onClick={handleWallColor} style={{ position: "absolute", top: "15%", left: "94%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleWallColor} style={{ position: "absolute", top: "16.5%", left: "94%", zIndex: "999" }}>
                 <img src={ColorPickerIcon} height='20' width='20' />
             </IconButton>
             {colorModal && (
@@ -1333,7 +1313,7 @@ const DrawingTool = ({
                     </DialogActions>
                 </Dialog>
             )}
-            <IconButton color="primary" onClick={handleRoomScheduleClick} style={{ position: "absolute", top: "15%", left: "90%", zIndex: "999" }}>
+            <IconButton color="primary" onClick={handleRoomScheduleClick} style={{ position: "absolute", top: "16.5%", left: "90%", zIndex: "999" }}>
                 <img src={wallDataIcon} height='20' width='20' />
             </IconButton>
             <Dialog
